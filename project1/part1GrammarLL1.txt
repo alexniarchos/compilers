@@ -1,10 +1,12 @@
 expr -> term expr2
 
-expr2 -> '^' term expr2
-	| e
-term -> num term2
-
-term2 -> '&' num term2
+expr2 -> ^ term expr2
 	| e
 
-num -> '0'..'9'
+term -> factor term2
+
+term2 -> & factor term2
+	| e
+
+factor -> ( expr )
+	| 0..9
