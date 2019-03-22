@@ -62,6 +62,7 @@ WhiteSpace     = {LineTerminator} | [ \t\f]
    one and nine followed by zero or more numbers between zero and nine
    or just a zero.  */
 dec_int_lit = 0 | [1-9][0-9]*
+name = ([a-z]|[A-Z]|[_])([a-z]|[A-Z]|[_]|[0-9])*
 
 %%
 /* ------------------------Lexical Rules Section---------------------- */
@@ -74,12 +75,32 @@ dec_int_lit = 0 | [1-9][0-9]*
  "("      { return symbol(sym.LPAREN); }
  ")"      { return symbol(sym.RPAREN); }
  ";"      { return symbol(sym.SEMI); }
+ "{"      { return symbol(sym.LBRACKET); }
+ "}"      { return symbol(sym.RBRACKET); }
+ "if"     { return symbol(sym.IF); }
+ "else"   { return symbol(sym.ELSE); }
+ ","      { return symbol(sym.COMMA); }
+ "prefix" { return symbol(sym.PREFIX); }
+ "suffix" { return symbol(sym.SUFFIX); }
 }
 
+{name} { return symbol(sym.NAME, new String(yytext())); }
 
 {dec_int_lit} { return symbol(sym.NUMBER, new Integer(yytext())); }
 
 {WhiteSpace} { /* just skip what was found, do nothing */ }
+
+<STRING> {
+      \"                             { yybegin(YYINITIAL);
+                                       return symbol(sym.STRING_LITERAL, stringBuffer.toString()); }
+      [^\n\r\"\\]+                   { stringBuffer.append( yytext() ); }
+      \\t                            { stringBuffer.append('\t'); }
+      \\n                            { stringBuffer.append('\n'); }
+
+      \\r                            { stringBuffer.append('\r'); }
+      \\\"                           { stringBuffer.append('\"'); }
+      \\                             { stringBuffer.append('\\'); }
+}
 
 /* No token was found for the input so through an error.  Print out an
    Illegal character message with the illegal character that was found. */

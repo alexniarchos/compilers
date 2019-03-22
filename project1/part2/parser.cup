@@ -21,12 +21,12 @@ scan with {: return s.next_token(); :};
  */
 
 /* Terminals (tokens returned by the scanner). */
-terminal            SEMI, PLUS, MINUS, TIMES, UMINUS, LPAREN, RPAREN;
+terminal            SEMI, PLUS, MINUS, TIMES, UMINUS, LPAREN, RPAREN, LBRACKET, RBRACKET, IF, ELSE, COMMA, NAME;
 terminal Integer    NUMBER;        // our scanner provides numbers as integers
+terminal String     STRING_LITERAL;        // our scanner provides numbers as strings
 
 /*  Non terminals */
-non terminal            expr_list;
-non terminal Integer    expr;      // used to store evaluated subexpressions
+non terminal        program, defs, def, args, calls, expr, cond, call;
 
 /**
  *  Precedence Declarations
@@ -38,14 +38,38 @@ precedence left UMINUS;
 /**
  *  The Grammar Rules
  */
-expr_list ::= expr_list expr:e SEMI         {: System.out.println(e);:}
-            | expr:e SEMI                   {: System.out.println(e);:}
-;
-expr      ::= expr:e1 PLUS  expr:e2         {: RESULT = e1+e2;       :}
-             | expr:e1 MINUS expr:e2        {: RESULT = e1-e2;       :}
-             | expr:e1 TIMES expr:e2        {: RESULT = e1*e2;       :}
-             | MINUS expr:e                 {: RESULT = -e;          :}
-  	         %prec UMINUS
-             | LPAREN expr:e RPAREN	        {: RESULT = e;           :}
-             | NUMBER:n	                    {: RESULT = n;           :}
-             ;
+
+program     ::= defs        {: :}
+            ;
+
+defs        ::= def defs    {: :}
+            | def           {:  :}
+            ;
+
+def         ::= NAME:n LPAREN args:a RPAREN LBRACKET expr:e RBRACKET {: System.out.println("public static String "+n+"("+a+")"+"{\n"+e+"\n}\n"); :}
+            ;
+
+args        ::= NAME:name COMMA args:a {: RESULT = "String " + name.toString() + "," + a; :}
+            | NAME:name  {: RESULT = "String " + name.toString(); :}
+            |
+            ;
+
+expr        ::= IF LPAREN cond:c RPAREN expr:e1 ELSE expr:e2
+            | call:c
+            | STRING_LITERAL:s
+            | expr PLUS expr
+            | NAME
+            ;
+
+cond        ::= IF LPAREN cond:c RPAREN expr:e1 ELSE expr:e2
+            | expr PREFIX expr
+            | expr SUFFIX expr
+            ;
+
+call        ::= NAME:n LPAREN args2 RPAREN
+            ;
+
+args2       ::= expr COMMA args2
+            | expr
+            |
+            ;
