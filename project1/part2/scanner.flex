@@ -36,6 +36,7 @@ import java_cup.runtime.*;
     /**
         The following two methods create java_cup.runtime.Symbol objects
     **/
+    StringBuffer stringBuffer = new StringBuffer();
     private Symbol symbol(int type) {
        return new Symbol(type, yyline, yycolumn);
     }
@@ -57,6 +58,8 @@ LineTerminator = \r|\n|\r\n
 
 /* White space is a line terminator, space, tab, or line feed. */
 WhiteSpace     = {LineTerminator} | [ \t\f]
+
+%state STRING
 
 /* A literal integer is is a number beginning with a number between
    one and nine followed by zero or more numbers between zero and nine

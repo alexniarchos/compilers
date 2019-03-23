@@ -21,12 +21,12 @@ scan with {: return s.next_token(); :};
  */
 
 /* Terminals (tokens returned by the scanner). */
-terminal            SEMI, PLUS, MINUS, TIMES, UMINUS, LPAREN, RPAREN, LBRACKET, RBRACKET, IF, ELSE, COMMA, NAME;
+terminal            SEMI, PLUS, MINUS, TIMES, UMINUS, LPAREN, RPAREN, LBRACKET, RBRACKET, IF, ELSE, COMMA, NAME, PREFIX, SUFFIX;
 terminal Integer    NUMBER;        // our scanner provides numbers as integers
 terminal String     STRING_LITERAL;        // our scanner provides numbers as strings
 
 /*  Non terminals */
-non terminal        program, defs, def, args, calls, expr, cond, call;
+non terminal        program, defs, def, args, calls, expr, cond, call, args2;
 
 /**
  *  Precedence Declarations
