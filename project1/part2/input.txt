@@ -1,6 +1,12 @@
-name(a1,a2,a3){
+name()  {
+    "John"
 }
-alex(){
+
+surname() {
+    "Doe"
 }
-niarchos(){
+
+fullname(first_name, sep, last_name) {
+    first_name + sep + last_name
 }
+

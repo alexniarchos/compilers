@@ -80,18 +80,15 @@ name = ([a-z]|[A-Z]|[_])([a-z]|[A-Z]|[_]|[0-9])*
  ";"      { return symbol(sym.SEMI); }
  "{"      { return symbol(sym.LBRACKET); }
  "}"      { return symbol(sym.RBRACKET); }
+ \"       { stringBuffer.setLength(0); yybegin(STRING); }
+{WhiteSpace} { /* just skip what was found, do nothing */ }
  "if"     { return symbol(sym.IF); }
  "else"   { return symbol(sym.ELSE); }
  ","      { return symbol(sym.COMMA); }
  "prefix" { return symbol(sym.PREFIX); }
  "suffix" { return symbol(sym.SUFFIX); }
+ {name} { return symbol(sym.NAME, new String(yytext())); }
 }
-
-{name} { return symbol(sym.NAME, new String(yytext())); }
-
-{dec_int_lit} { return symbol(sym.NUMBER, new Integer(yytext())); }
-
-{WhiteSpace} { /* just skip what was found, do nothing */ }
 
 <STRING> {
       \"                             { yybegin(YYINITIAL);

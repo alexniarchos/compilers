@@ -39,7 +39,7 @@ precedence left UMINUS;
  *  The Grammar Rules
  */
 
-program     ::= defs        {: :}
+program     ::= defs calls  {: :}
             ;
 
 defs        ::= def defs    {: :}
@@ -56,7 +56,7 @@ args        ::= NAME:name COMMA args:a {: RESULT = "String " + name.toString() +
 
 expr        ::= IF LPAREN cond:c RPAREN expr:e1 ELSE expr:e2
             | call:c
-            | STRING_LITERAL:s
+            | STRING_LITERAL:s {: RESULT = "return \"" + s + "\""; :}
             | expr PLUS expr
             | NAME
             ;
@@ -64,6 +64,10 @@ expr        ::= IF LPAREN cond:c RPAREN expr:e1 ELSE expr:e2
 cond        ::= IF LPAREN cond:c RPAREN expr:e1 ELSE expr:e2
             | expr PREFIX expr
             | expr SUFFIX expr
+            ;
+
+calls       ::= call calls
+            | call
             ;
 
 call        ::= NAME:n LPAREN args2 RPAREN
