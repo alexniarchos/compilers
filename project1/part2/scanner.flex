@@ -73,11 +73,8 @@ name = ([a-z]|[A-Z]|[_])([a-z]|[A-Z]|[_]|[0-9])*
 <YYINITIAL> {
 /* operators */
  "+"      { return symbol(sym.PLUS); }
- "-"      { return symbol(sym.MINUS); }
- "*"      { return symbol(sym.TIMES); }
  "("      { return symbol(sym.LPAREN); }
  ")"      { return symbol(sym.RPAREN); }
- ";"      { return symbol(sym.SEMI); }
  "{"      { return symbol(sym.LBRACKET); }
  "}"      { return symbol(sym.RBRACKET); }
  \"       { stringBuffer.setLength(0); yybegin(STRING); }

@@ -21,59 +21,67 @@ scan with {: return s.next_token(); :};
  */
 
 /* Terminals (tokens returned by the scanner). */
-terminal            SEMI, PLUS, MINUS, TIMES, UMINUS, LPAREN, RPAREN, LBRACKET, RBRACKET, IF, ELSE, COMMA, NAME, PREFIX, SUFFIX;
-terminal Integer    NUMBER;        // our scanner provides numbers as integers
+terminal            PLUS, LPAREN, RPAREN, LBRACKET, RBRACKET, IF, ELSE, COMMA, NAME, PREFIX, SUFFIX;
 terminal String     STRING_LITERAL;        // our scanner provides numbers as strings
 
 /*  Non terminals */
-non terminal        program, defs, def, args, calls, expr, cond, call, args2;
+non terminal        program, defs, def, args, calls, expr, constExpr, cond, call, callIdArg, args2, args3;
 
-/**
- *  Precedence Declarations
- */
-precedence left PLUS, MINUS;
-precedence left TIMES;
-precedence left UMINUS;
+precedence left PLUS;
 
 /**
  *  The Grammar Rules
  */
 
-program     ::= defs calls  {: :}
+program     ::= defs:d  {: System.out.println("public class Main {\n"+d+"\n}"); :}
             ;
 
-defs        ::= def defs    {: :}
-            | def           {:  :}
+defs        ::= def:d defs:ds   {: RESULT = "\t"+d+ds; :}
+            | calls:cs           {: RESULT = "\tpublic static void main(String[] args) {\n"+cs+"\t}"; :}
             ;
 
-def         ::= NAME:n LPAREN args:a RPAREN LBRACKET expr:e RBRACKET {: System.out.println("public static String "+n+"("+a+")"+"{\n"+e+"\n}\n"); :}
+calls       ::= call:c calls:cs   {: RESULT = "\t\t"+"System.out.println("+c+");\n"+cs; :}
+            | call:c              {: RESULT = "\t\t"+"System.out.println("+c+");\n"; :}
             ;
 
-args        ::= NAME:name COMMA args:a {: RESULT = "String " + name.toString() + "," + a; :}
-            | NAME:name  {: RESULT = "String " + name.toString(); :}
-            |
+def         ::= NAME:n LPAREN args:a RPAREN LBRACKET expr:e RBRACKET {: RESULT = "public static String "+n+"("+a+")"+"{\n\t\treturn "+e+";\n\t}\n"; :}
+            | NAME:n LPAREN RPAREN LBRACKET expr:e RBRACKET {: RESULT = "public static String "+n+"("+")"+"{\n\t\treturn "+e+";\n\t}\n"; :}
             ;
 
-expr        ::= IF LPAREN cond:c RPAREN expr:e1 ELSE expr:e2
-            | call:c
-            | STRING_LITERAL:s {: RESULT = "return \"" + s + "\""; :}
-            | expr PLUS expr
-            | NAME
+call        ::= NAME:n LPAREN args2:a RPAREN    {: RESULT = n+"("+a+")"; :}
+            | NAME:n LPAREN RPAREN              {: RESULT = n+"()"; :}
             ;
 
-cond        ::= IF LPAREN cond:c RPAREN expr:e1 ELSE expr:e2
-            | expr PREFIX expr
-            | expr SUFFIX expr
+callIdArg   ::= NAME:n LPAREN args3:a RPAREN    {: RESULT = n+"("+a+")"; :}
+            | NAME:n LPAREN RPAREN              {: RESULT = n+"()"; :}
             ;
 
-calls       ::= call calls
-            | call
+args        ::= NAME:name COMMA args:a          {: RESULT = "String " + name + "," + a; :}
+            | NAME:name                         {: RESULT = "String " + name; :}
             ;
 
-call        ::= NAME:n LPAREN args2 RPAREN
+args2       ::= constExpr:ce COMMA args2:a      {: RESULT = ce+","+a; :}
+            | constExpr:ce                      {: RESULT = ce; :}
             ;
 
-args2       ::= expr COMMA args2
-            | expr
-            |
+args3       ::= expr:e COMMA args3:a      {: RESULT = e+","+a; :}
+            | expr:e                      {: RESULT = e; :}
+            ;
+
+expr        ::= IF LPAREN cond:c RPAREN expr:e1 ELSE expr:e2    {: RESULT = c+" ? "+e1+" : " + e2; :}
+            | callIdArg:c                                       {: RESULT = ""+c; :}
+            | STRING_LITERAL:s                                  {: RESULT = "\"" + s + "\""; :}
+            | expr:e1 PLUS expr:e2                              {: RESULT = e1+" + "+e2; :}
+            | NAME:n                                            {: RESULT = "" + n; :}
+            ;
+
+constExpr   ::= IF LPAREN cond:c RPAREN constExpr:e1 ELSE constExpr:e2  {: RESULT = c+" ? "+e1+" : " + e2; :}
+            | call:c                                                    {: RESULT = ""+c; :}
+            | STRING_LITERAL:s                                          {: RESULT = "\"" + s + "\""; :}
+            | constExpr:e1 PLUS constExpr:e2                            {: RESULT = e1+" + "+e2; :}
+            ;
+
+cond        ::= IF LPAREN cond:c RPAREN expr:e1 ELSE expr:e2    {: RESULT = c+" ? "+e1+" : " + e2; :}
+            | expr:e1 PREFIX expr:e2                            {: RESULT = e2+".startsWith("+e1+")"; :}
+            | expr:e1 SUFFIX expr:e2                            {: RESULT = e2+".endsWith("+e1+")"; :}
             ;
