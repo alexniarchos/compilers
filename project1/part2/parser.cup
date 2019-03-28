@@ -82,6 +82,6 @@ constExpr   ::= IF LPAREN cond:c RPAREN constExpr:e1 ELSE constExpr:e2  {: RESUL
             ;
 
 cond        ::= IF LPAREN cond:c RPAREN expr:e1 ELSE expr:e2    {: RESULT = "(("+c+")"+" ? "+e1+" : " + e2+")"; :}
-            | expr:e1 PREFIX expr:e2                            {: RESULT = e2+".startsWith("+e1+")"; :}
-            | expr:e1 SUFFIX expr:e2                            {: RESULT = e2+".endsWith("+e1+")"; :}
+            | expr:e1 PREFIX expr:e2                            {: RESULT = "("+e2+").startsWith("+e1+")"; :}
+            | expr:e1 SUFFIX expr:e2                            {: RESULT = "("+e2+").endsWith("+e1+")"; :}
             ;
