@@ -68,20 +68,20 @@ args3       ::= expr:e COMMA args3:a      {: RESULT = e+","+a; :}
             | expr:e                      {: RESULT = e; :}
             ;
 
-expr        ::= IF LPAREN cond:c RPAREN expr:e1 ELSE expr:e2    {: RESULT = c+" ? "+e1+" : " + e2; :}
+expr        ::= IF LPAREN cond:c RPAREN expr:e1 ELSE expr:e2    {: RESULT = "(("+c+")"+" ? "+e1+" : " + e2+")"; :}
             | callIdArg:c                                       {: RESULT = ""+c; :}
             | STRING_LITERAL:s                                  {: RESULT = "\"" + s + "\""; :}
             | expr:e1 PLUS expr:e2                              {: RESULT = e1+" + "+e2; :}
             | NAME:n                                            {: RESULT = "" + n; :}
             ;
 
-constExpr   ::= IF LPAREN cond:c RPAREN constExpr:e1 ELSE constExpr:e2  {: RESULT = c+" ? "+e1+" : " + e2; :}
+constExpr   ::= IF LPAREN cond:c RPAREN constExpr:e1 ELSE constExpr:e2  {: RESULT = "(("+c+")"+" ? "+e1+" : " + e2+")"; :}
             | call:c                                                    {: RESULT = ""+c; :}
             | STRING_LITERAL:s                                          {: RESULT = "\"" + s + "\""; :}
             | constExpr:e1 PLUS constExpr:e2                            {: RESULT = e1+" + "+e2; :}
             ;
 
-cond        ::= IF LPAREN cond:c RPAREN expr:e1 ELSE expr:e2    {: RESULT = c+" ? "+e1+" : " + e2; :}
+cond        ::= IF LPAREN cond:c RPAREN expr:e1 ELSE expr:e2    {: RESULT = "(("+c+")"+" ? "+e1+" : " + e2+")"; :}
             | expr:e1 PREFIX expr:e2                            {: RESULT = e2+".startsWith("+e1+")"; :}
             | expr:e1 SUFFIX expr:e2                            {: RESULT = e2+".endsWith("+e1+")"; :}
             ;
