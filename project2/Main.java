@@ -11,7 +11,7 @@ class Main {
 	FileInputStream fis = null;
 	try{
 	    fis = new FileInputStream(args[0]);
-	    CalcParser parser = new CalcParser(fis);
+	    MiniJavaParser parser = new MiniJavaParser(fis);
 	    System.err.println("Program parsed successfully.");
 	    EvalVisitor eval = new EvalVisitor();
 	    Goal root = parser.Goal();
