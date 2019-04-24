@@ -116,7 +116,7 @@ class Main {
 		symbolTable = new LinkedHashMap<String,ClassStruct>();
 		fillSTVisitor fillST = new fillSTVisitor();
 	    Goal root = parser.Goal();
-		System.out.println(root.accept(fillST));
+		root.accept(fillST);
 		printOffsets();
 	}
 	catch(ParseException ex){
