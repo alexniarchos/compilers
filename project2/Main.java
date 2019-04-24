@@ -39,14 +39,19 @@ class Main {
 		}
 	}
 
-	public class Offsets{
+	public static class Offsets{
 		public Integer varOffset;
 		public Integer funOffset;
+
+		public Offsets(Integer v,Integer f){
+			varOffset = v;
+			funOffset = f;
+		}
 	}
 
-	public void printOffsets(){
+	public static void printOffsets(){
 		LinkedHashMap<String,Offsets> offsets = new LinkedHashMap<String,Offsets>();
-		Integer varOffset,funOffset;
+		Integer varOffset=0,funOffset=0;
 		for(Map.Entry<String,ClassStruct> classEntry : symbolTable.entrySet()){
 			if(classEntry.getValue().functions.get("main") != null){
 				continue;
@@ -63,13 +68,8 @@ class Main {
 					System.out.println("Parent class doesn't have offsets!");
 				}
 			}
-			else{
-				// there is no parent class
-				varOffset = 0;
-				funOffset = 0;
-			}
 			// calculate and print variable offsets
-			for(Map.Entry<String,String> varEntry : classEntry.dataMembers.entrySet()){
+			for(Map.Entry<String,String> varEntry : classEntry.getValue().dataMembers.entrySet()){
 				System.out.println(classEntry.getKey()+"."+varEntry.getKey()+" : "+varOffset);
 				if(varEntry.getValue().equals("int")){
 					varOffset+=4;
@@ -81,7 +81,24 @@ class Main {
 					varOffset+=8;
 				}
 			}
-
+			// if there is no parent class no need to check for overrides
+			if(classEntry.getValue().parentName == null){
+				for(Map.Entry<String,funStruct> funEntry : classEntry.getValue().functions.entrySet()){
+					System.out.println(classEntry.getKey()+"."+funEntry.getKey()+" : "+funOffset);
+					funOffset += 8;
+				}
+			}
+			else{
+				for(Map.Entry<String,funStruct> funEntry : classEntry.getValue().functions.entrySet()){
+					if(symbolTable.get(classEntry.getValue().parentName).functions.get(funEntry.getKey())!=null){
+						continue;
+					}  
+					System.out.println(classEntry.getKey()+"."+funEntry.getKey()+" : "+funOffset);
+					funOffset += 8;
+				}
+			}
+			// update offsets
+			offsets.put(classEntry.getKey(),new Offsets(varOffset,funOffset));
 		}
 	}
 
@@ -100,7 +117,7 @@ class Main {
 		fillSTVisitor fillST = new fillSTVisitor();
 	    Goal root = parser.Goal();
 		System.out.println(root.accept(fillST));
-		
+		printOffsets();
 	}
 	catch(ParseException ex){
 	    System.out.println(ex.getMessage());
