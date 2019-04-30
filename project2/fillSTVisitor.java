@@ -1,13 +1,16 @@
 import syntaxtree.*;
 import visitor.GJNoArguDepthFirst;
 import java.lang.System;
+import java.util.Map.Entry;
+import java.util.ArrayList;
 
 public class fillSTVisitor extends GJNoArguDepthFirst<String>{
 
     public class State{
-        public String className;
-        public String funName;
+        public Main.ClassStruct classSt;
+        public Main.funStruct funSt;
         public String varOf;
+        public Integer argCount;
     }
 
     public State state = new State();
@@ -41,8 +44,8 @@ public class fillSTVisitor extends GJNoArguDepthFirst<String>{
         tempClass.functions.put("main",tempFun);
         
         Main.symbolTable.put(className,tempClass);
-        state.className = className;
-        state.funName = "main";
+        state.classSt = tempClass;
+        state.funSt = tempFun;
         state.varOf = "function";
         n.f14.accept(this);
         return null;
@@ -56,14 +59,17 @@ public class fillSTVisitor extends GJNoArguDepthFirst<String>{
     public String visit(VarDeclaration n) {
         String type = n.f0.accept(this);
         String id = n.f1.accept(this);
-        Main.ClassStruct classST = Main.symbolTable.get(state.className);
+        Main.ClassStruct classST = state.classSt;
         if(state.varOf.equals("function")){
             // add var to function
-            Main.funStruct fun = classST.functions.get(state.funName);
+            Main.funStruct fun = state.funSt;
             // check for duplicates
             if(fun.vars.get(id) == null){
                 // unique
                 fun.vars.put(id,type);
+            }
+            else{
+                System.out.println("Variable " + id + " has already been declared");
             }
         }
         else if(state.varOf.equals("class")){
@@ -92,7 +98,7 @@ public class fillSTVisitor extends GJNoArguDepthFirst<String>{
 
         Main.ClassStruct tempClass = new Main.ClassStruct(id,null);
         Main.symbolTable.put(id,tempClass);
-        state.className = id;
+        state.classSt = tempClass;
         state.varOf = "class";
 
         n.f3.accept(this);
@@ -120,17 +126,101 @@ public class fillSTVisitor extends GJNoArguDepthFirst<String>{
     public String visit(MethodDeclaration n) {
         String type = n.f1.accept(this);
         String id = n.f2.accept(this);
-        state.funName = id;
 
+        // get class
+        Main.ClassStruct tempClass = state.classSt;
+        if(tempClass.functions.get(id) != null){
+            System.out.println("function: " + " already exists!");
+            return null;
+        }
+
+        Main.funStruct tempFun = new Main.funStruct(type, id);
+
+        // check that if function overrides, then it overrides correctly
+        Main.ClassStruct parentClass = Main.symbolTable.get(tempClass.parentName);
+        while(parentClass != null){
+            // check if function exists in parentClass
+            if(parentClass.functions.get(id) != null){
+                tempFun.overridesFun = parentClass.functions.get(id);
+                break;
+            }
+            parentClass = Main.symbolTable.get(parentClass.parentName);
+        }
+
+        
+        tempClass.functions.put(id,tempFun);
+        state.funSt = tempFun;
+
+        // add parameters to function
+        state.argCount = 0;
         n.f4.accept(this);
-        n.f5.accept(this);
-        n.f6.accept(this);
+
+        // add variables
         n.f7.accept(this);
-        n.f8.accept(this);
-        n.f9.accept(this);
-        n.f10.accept(this);
-        n.f11.accept(this);
-        n.f12.accept(this);
+
+        return null;
+    }
+
+    /**
+    * f0 -> Type()
+    * f1 -> Identifier()
+    */
+    public String visit(FormalParameter n) {
+        String type = n.f0.accept(this);
+        String id = n.f1.accept(this);
+
+        Main.ClassStruct tempClass = state.classSt;
+        Main.funStruct tempFun = state.funSt;
+
+        if(tempFun.overridesFun != null){
+            ArrayList<Entry<String, String>> arglist = new ArrayList<Entry<String,String>> (tempFun.args.entrySet()); 
+            if(! arglist.get(state.argCount).getValue().equals(type)){
+                System.out.println("Function: "+tempFun.funName+ " found: "+type+" ,expected: "+arglist.get(state.argCount).getValue());
+                return null;
+            }
+        }
+        else{
+            if(tempFun.args.get(id) != null){
+                System.out.println("Function: "+tempFun.funName+" argument: " + id + " already exists!");
+                return null;
+            }
+            tempFun.args.put(id,type);
+            state.argCount++;
+        }
+        return null;
+    }
+
+    /**
+    * f0 -> "class"
+    * f1 -> Identifier()
+    * f2 -> "extends"
+    * f3 -> Identifier()
+    * f4 -> "{"
+    * f5 -> ( VarDeclaration() )*
+    * f6 -> ( MethodDeclaration() )*
+    * f7 -> "}"
+    */
+    public String visit(ClassExtendsDeclaration n) {
+        String id = n.f1.accept(this);
+        String extId = n.f3.accept(this);
+
+        // check duplicates
+        if(Main.symbolTable.get(id)!=null){
+            throw new RuntimeException("class: "+id+" already exists");
+        }
+
+        // parent must be declared before extend
+        if(Main.symbolTable.get(extId)==null){
+            throw new RuntimeException("parent class: "+extId+" hasn't been declared before");
+        }
+
+        Main.ClassStruct tempClass = new Main.ClassStruct(id, extId);
+        Main.symbolTable.put(id, tempClass);
+        state.classSt = tempClass;
+        state.varOf = "class";
+        n.f5.accept(this);
+        state.varOf = "function";
+        n.f6.accept(this);
         return null;
     }
 
@@ -141,7 +231,7 @@ public class fillSTVisitor extends GJNoArguDepthFirst<String>{
         return n.f0.toString();
     }
 
-       /**
+    /**
     * f0 -> "int"
     * f1 -> "["
     * f2 -> "]"

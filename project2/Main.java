@@ -14,6 +14,7 @@ class Main {
 		public String funName;
 		public LinkedHashMap<String,String> args;
 		public LinkedHashMap<String,String> vars;
+		public funStruct overridesFun;
 
 		public funStruct(String rt,String fn){
 			// initialization
@@ -51,15 +52,17 @@ class Main {
 
 	public static void printOffsets(){
 		LinkedHashMap<String,Offsets> offsets = new LinkedHashMap<String,Offsets>();
-		Integer varOffset=0,funOffset=0;
+		Integer varOffset,funOffset;
 		for(Map.Entry<String,ClassStruct> classEntry : symbolTable.entrySet()){
+			varOffset=0;
+			funOffset=0;
 			if(classEntry.getValue().functions.get("main") != null){
 				continue;
 			}
 			// check if this class has a parent (offsets will continue from there)
 			if(classEntry.getValue().parentName != null){
 				// inherit offsets
-				Offsets offset = offsets.get(classEntry.getKey());
+				Offsets offset = offsets.get(classEntry.getValue().parentName);
 				if(offset!=null){
 					varOffset = offset.varOffset;
 					funOffset = offset.funOffset;	
@@ -90,7 +93,8 @@ class Main {
 			}
 			else{
 				for(Map.Entry<String,funStruct> funEntry : classEntry.getValue().functions.entrySet()){
-					if(symbolTable.get(classEntry.getValue().parentName).functions.get(funEntry.getKey())!=null){
+					// overriding function
+					if(funEntry.getValue().overridesFun!=null){
 						continue;
 					}  
 					System.out.println(classEntry.getKey()+"."+funEntry.getKey()+" : "+funOffset);
@@ -118,6 +122,9 @@ class Main {
 	    Goal root = parser.Goal();
 		root.accept(fillST);
 		printOffsets();
+	}
+	catch(RuntimeException ex){
+		System.out.println(ex.getMessage());
 	}
 	catch(ParseException ex){
 	    System.out.println(ex.getMessage());
