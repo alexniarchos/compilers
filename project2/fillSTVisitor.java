@@ -69,7 +69,7 @@ public class fillSTVisitor extends GJNoArguDepthFirst<String>{
                 fun.vars.put(id,type);
             }
             else{
-                System.out.println("Variable " + id + " has already been declared");
+                throw new RuntimeException("Variable " + id + " has already been declared");
             }
         }
         else if(state.varOf.equals("class")){
@@ -130,8 +130,7 @@ public class fillSTVisitor extends GJNoArguDepthFirst<String>{
         // get class
         Main.ClassStruct tempClass = state.classSt;
         if(tempClass.functions.get(id) != null){
-            System.out.println("function: " + " already exists!");
-            return null;
+            throw new RuntimeException("function: " + " already exists!");
         }
 
         Main.funStruct tempFun = new Main.funStruct(type, id);
@@ -175,14 +174,12 @@ public class fillSTVisitor extends GJNoArguDepthFirst<String>{
         if(tempFun.overridesFun != null){
             ArrayList<Entry<String, String>> arglist = new ArrayList<Entry<String,String>> (tempFun.args.entrySet()); 
             if(! arglist.get(state.argCount).getValue().equals(type)){
-                System.out.println("Function: "+tempFun.funName+ " found: "+type+" ,expected: "+arglist.get(state.argCount).getValue());
-                return null;
+                throw new RuntimeException("Function: "+tempFun.funName+ " found: "+type+" ,expected: "+arglist.get(state.argCount).getValue());
             }
         }
         else{
             if(tempFun.args.get(id) != null){
-                System.out.println("Function: "+tempFun.funName+" argument: " + id + " already exists!");
-                return null;
+                throw new RuntimeException("Function: "+tempFun.funName+" argument: " + id + " already exists!");
             }
             tempFun.args.put(id,type);
             state.argCount++;
