@@ -108,37 +108,49 @@ class Main {
 
 
     public static void main (String [] args){
-	if(args.length != 1){
-	    System.err.println("Usage: java Driver <inputFile>");
-	    System.exit(1);
-	}
-	FileInputStream fis = null;
-	try{
-	    fis = new FileInputStream(args[0]);
-	    MiniJavaParser parser = new MiniJavaParser(fis);
-	    System.err.println("Program parsed successfully.");
-		symbolTable = new LinkedHashMap<String,ClassStruct>();
-		fillSTVisitor fillST = new fillSTVisitor();
-	    Goal root = parser.Goal();
-		root.accept(fillST);
-		printOffsets();
-	}
-	catch(RuntimeException ex){
-		System.out.println(ex.getMessage());
-	}
-	catch(ParseException ex){
-	    System.out.println(ex.getMessage());
-	}
-	catch(FileNotFoundException ex){
-	    System.err.println(ex.getMessage());
-	}
-	finally{
-	    try{
-		if(fis != null) fis.close();
-	    }
-	    catch(IOException ex){
-		System.err.println(ex.getMessage());
-	    }
-	}
+		if(args.length != 1){
+			System.err.println("Usage: java Driver <inputFile>");
+			System.exit(1);
+		}
+		FileInputStream fis = null;
+		try{
+			fis = new FileInputStream(args[0]);
+			MiniJavaParser parser = new MiniJavaParser(fis);
+			System.err.println("Program parsed successfully.");
+			symbolTable = new LinkedHashMap<String,ClassStruct>();
+			fillSTVisitor fillST = new fillSTVisitor();
+			Goal root = parser.Goal();
+			try {
+				root.accept(fillST);
+			} catch (Exception ex) {
+				System.out.println("fill Symbol Table Error: "+ex.getMessage());
+			}
+			
+			printOffsets();
+			
+			TypeCheckVisitor tc = new TypeCheckVisitor();
+			try {
+				root.accept(tc);
+			} catch (Exception ex) {
+				System.out.println("Type Check Error: "+ex.getMessage());
+			}
+		}
+		// catch(RuntimeException ex){
+		// 	System.out.println("Type Check Error: "+ex.getMessage());
+		// }
+		catch(ParseException ex){
+			System.out.println(ex.getMessage());
+		}
+		catch(FileNotFoundException ex){
+			System.err.println(ex.getMessage());
+		}
+		finally{
+			try{
+				if(fis != null) fis.close();
+			}
+			catch(IOException ex){
+				System.err.println(ex.getMessage());
+			}
+		}
     }
 }

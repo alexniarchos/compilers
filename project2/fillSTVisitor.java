@@ -34,7 +34,7 @@ public class fillSTVisitor extends GJNoArguDepthFirst<String>{
     * f16 -> "}"
     * f17 -> "}"
     */
-    public String visit(MainClass n) {
+    public String visit(MainClass n) throws Exception {
         String className = n.f1.accept(this);
         String mainArg = n.f11.accept(this);
         
@@ -56,7 +56,7 @@ public class fillSTVisitor extends GJNoArguDepthFirst<String>{
     * f1 -> Identifier()
     * f2 -> ";"
     */
-    public String visit(VarDeclaration n) {
+    public String visit(VarDeclaration n) throws Exception {
         String type = n.f0.accept(this);
         String id = n.f1.accept(this);
         Main.ClassStruct classST = state.classSt;
@@ -69,7 +69,7 @@ public class fillSTVisitor extends GJNoArguDepthFirst<String>{
                 fun.vars.put(id,type);
             }
             else{
-                throw new RuntimeException("Variable " + id + " has already been declared");
+                throw new Exception("Variable " + id + " has already been declared");
             }
         }
         else if(state.varOf.equals("class")){
@@ -85,30 +85,33 @@ public class fillSTVisitor extends GJNoArguDepthFirst<String>{
     }
 
     /**
-    * f0 -> "class"
+    * f0 -> Type()
     * f1 -> Identifier()
-    * f2 -> "{"
-    * f3 -> ( VarDeclaration() )*
-    * f4 -> ( MethodDeclaration() )*
-    * f5 -> "}"
     */
-    public String visit(ClassDeclaration n) {
-        // get class name
+    public String visit(FormalParameter n) throws Exception{
+        String type = n.f0.accept(this);
         String id = n.f1.accept(this);
 
-        Main.ClassStruct tempClass = new Main.ClassStruct(id,null);
-        Main.symbolTable.put(id,tempClass);
-        state.classSt = tempClass;
-        state.varOf = "class";
+        Main.ClassStruct tempClass = state.classSt;
+        Main.funStruct tempFun = state.funSt;
 
-        n.f3.accept(this);
-        state.varOf = "function";
-        n.f4.accept(this);
+        if(tempFun.overridesFun != null){
+            ArrayList<Entry<String, String>> arglist = new ArrayList<Entry<String,String>> (tempFun.args.entrySet()); 
+            if(! arglist.get(state.argCount).getValue().equals(type)){
+                throw new Exception("Function: "+tempFun.funName+ " found: "+type+" ,expected: "+arglist.get(state.argCount).getValue());
+            }
+        }
+        else{
+            if(tempFun.args.get(id) != null){
+                throw new Exception("Function: "+tempFun.funName+" argument: " + id + " already exists!");
+            }
+            tempFun.args.put(id,type);
+            state.argCount++;
+        }
         return null;
     }
 
-
-    /**
+        /**
     * f0 -> "public"
     * f1 -> Type()
     * f2 -> Identifier()
@@ -123,14 +126,14 @@ public class fillSTVisitor extends GJNoArguDepthFirst<String>{
     * f11 -> ";"
     * f12 -> "}"
     */
-    public String visit(MethodDeclaration n) {
+    public String visit(MethodDeclaration n) throws Exception{
         String type = n.f1.accept(this);
         String id = n.f2.accept(this);
 
         // get class
         Main.ClassStruct tempClass = state.classSt;
         if(tempClass.functions.get(id) != null){
-            throw new RuntimeException("function: " + " already exists!");
+            throw new Exception("function: " + " already exists!");
         }
 
         Main.funStruct tempFun = new Main.funStruct(type, id);
@@ -161,29 +164,28 @@ public class fillSTVisitor extends GJNoArguDepthFirst<String>{
     }
 
     /**
-    * f0 -> Type()
+    * f0 -> "class"
     * f1 -> Identifier()
+    * f2 -> "{"
+    * f3 -> ( VarDeclaration() )*
+    * f4 -> ( MethodDeclaration() )*
+    * f5 -> "}"
     */
-    public String visit(FormalParameter n) {
-        String type = n.f0.accept(this);
+    public String visit(ClassDeclaration n) throws Exception {
+        // get class name
         String id = n.f1.accept(this);
-
-        Main.ClassStruct tempClass = state.classSt;
-        Main.funStruct tempFun = state.funSt;
-
-        if(tempFun.overridesFun != null){
-            ArrayList<Entry<String, String>> arglist = new ArrayList<Entry<String,String>> (tempFun.args.entrySet()); 
-            if(! arglist.get(state.argCount).getValue().equals(type)){
-                throw new RuntimeException("Function: "+tempFun.funName+ " found: "+type+" ,expected: "+arglist.get(state.argCount).getValue());
-            }
+        // check duplicate class name
+        if(Main.symbolTable.get(id)!=null){
+            throw new Exception("Class "+id+" has already been declared");
         }
-        else{
-            if(tempFun.args.get(id) != null){
-                throw new RuntimeException("Function: "+tempFun.funName+" argument: " + id + " already exists!");
-            }
-            tempFun.args.put(id,type);
-            state.argCount++;
-        }
+        Main.ClassStruct tempClass = new Main.ClassStruct(id,null);
+        Main.symbolTable.put(id,tempClass);
+        state.classSt = tempClass;
+        state.varOf = "class";
+
+        n.f3.accept(this);
+        state.varOf = "function";
+        n.f4.accept(this);
         return null;
     }
 
@@ -197,18 +199,18 @@ public class fillSTVisitor extends GJNoArguDepthFirst<String>{
     * f6 -> ( MethodDeclaration() )*
     * f7 -> "}"
     */
-    public String visit(ClassExtendsDeclaration n) {
+    public String visit(ClassExtendsDeclaration n) throws Exception{
         String id = n.f1.accept(this);
         String extId = n.f3.accept(this);
 
         // check duplicates
         if(Main.symbolTable.get(id)!=null){
-            throw new RuntimeException("class: "+id+" already exists");
+            throw new Exception("class: "+id+" already exists");
         }
 
         // parent must be declared before extend
         if(Main.symbolTable.get(extId)==null){
-            throw new RuntimeException("parent class: "+extId+" hasn't been declared before");
+            throw new Exception("parent class: "+extId+" hasn't been declared before");
         }
 
         Main.ClassStruct tempClass = new Main.ClassStruct(id, extId);
