@@ -509,6 +509,14 @@ public class TypeCheckVisitor extends GJNoArguDepthFirst<String>{
     *       | BracketExpression()
     */
     public String visit(PrimaryExpression n) throws Exception {
+        String id = n.f0.accept(this);
+        if(!id.equals("int") && !id.equals("boolean") && !id.equals("this")){
+            String type = findTypeOf(id);
+            if(type!=null){
+                return type;
+            }
+            throw new Exception("PrimaryExpression: Variable: "+id+" hasn't been declared");
+        }
         return n.f0.accept(this);
     }
 
