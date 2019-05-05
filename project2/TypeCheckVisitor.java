@@ -394,7 +394,7 @@ public class TypeCheckVisitor extends GJNoArguDepthFirst<String>{
         if(t1.equals("int[]") && t2.equals("int")){
             return new String("int");
         }
-        throw new Exception("ArrayLookup: t1 = "+t1+", t2 = "+t2+" should be int, int[]");
+        throw new Exception("ArrayLookup: t1 = "+t1+", t2 = "+t2+" should be int[], int");
     }
 
     /**
@@ -525,6 +525,17 @@ public class TypeCheckVisitor extends GJNoArguDepthFirst<String>{
         Main.funStruct tempFun = state.messageSendFun;
         ArrayList<Entry<String, String>> arglist = new ArrayList<Entry<String,String>> (tempFun.args.entrySet()); 
         if(state.argCount < arglist.size() && !arglist.get(state.argCount).getValue().equals(expr)){
+            // check if it is subtype
+            Main.ClassStruct tempClass = Main.symbolTable.get(expr);
+            tempClass = Main.symbolTable.get(tempClass.parentName);
+            while(tempClass!=null){
+                if(arglist.get(state.argCount).getValue().equals(tempClass.className)){
+                    state.argCount++;
+                    n.f1.accept(this);
+                    return null;
+                }
+                tempClass = Main.symbolTable.get(tempClass.parentName);
+            }
             throw new Exception("ExpressionTerm: Class: "+state.classSt.className+" Function: "+tempFun.funName+ " found: "+expr+" ,expected: "+arglist.get(state.argCount).getValue());
         }
         state.argCount++;
