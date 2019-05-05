@@ -136,10 +136,8 @@ public class TypeCheckVisitor extends GJNoArguDepthFirst<String>{
 
         if(!type.equals(exprType)){
             Main.ClassStruct tempClass = Main.symbolTable.get(state.classSt.parentName);
-            String parentClass;
             while(tempClass!=null){
-                parentClass = tempClass.parentName;
-                if(parentClass.equals(exprType)){
+                if(tempClass.equals(exprType)){
                     return type;
                 }
                 tempClass = Main.symbolTable.get(tempClass.parentName);
@@ -208,7 +206,11 @@ public class TypeCheckVisitor extends GJNoArguDepthFirst<String>{
             throw new Exception("AssignmentStatement: Variable: "+id+" hasn't been declared");
         }
         if(!idType.equals(exprType)){
-            Main.ClassStruct tempClass = Main.symbolTable.get(state.classSt.parentName); 
+            Main.ClassStruct tempClass = Main.symbolTable.get(exprType); 
+            if(tempClass == null){
+                throw new Exception("AssignmentStatement: Types: id = "+id+", type = "+idType+" and "+exprType+" don't match");
+            }
+            tempClass = Main.symbolTable.get(tempClass.parentName);
             while(tempClass!=null){
                 if(idType.equals(tempClass.className)){
                     return null;
@@ -471,8 +473,10 @@ public class TypeCheckVisitor extends GJNoArguDepthFirst<String>{
                 }
                 tempClass = Main.symbolTable.get(tempClass.parentName);
             }
-            // couldnt find function
-            throw new Exception("MessageSend: function "+funId+" hasn't been declared");
+            if(tempFun == null){
+                // couldnt find function
+                throw new Exception("MessageSend: function "+funId+" hasn't been declared");
+            }
         }
         Main.funStruct oldfun = state.messageSendFun;
         state.messageSendFun = tempFun;

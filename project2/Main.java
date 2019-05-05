@@ -68,7 +68,7 @@ class Main {
 					funOffset = offset.funOffset;	
 				}
 				else{
-					System.out.println("Parent class doesn't have offsets!");
+					// System.out.println("Parent class doesn't have offsets!");
 				}
 			}
 			// calculate and print variable offsets
@@ -108,49 +108,49 @@ class Main {
 
 
     public static void main (String [] args) throws Exception{
-		if(args.length != 1){
-			System.err.println("Usage: java Driver <inputFile>");
-			System.exit(1);
-		}
-		FileInputStream fis = null;
-		try{
-			fis = new FileInputStream(args[0]);
-			MiniJavaParser parser = new MiniJavaParser(fis);
-			System.err.println("Program parsed successfully.");
-			symbolTable = new LinkedHashMap<String,ClassStruct>();
-			fillSTVisitor fillST = new fillSTVisitor();
-			Goal root = parser.Goal();
-			// try {
-				root.accept(fillST);
-			// } catch (Exception ex) {
-			// 	System.out.println("fill Symbol Table Error: "+ex.getMessage());
-			// }
-			
-			printOffsets();
-			
-			TypeCheckVisitor tc = new TypeCheckVisitor();
-			// try {
-				root.accept(tc);
-			// } catch (Exception ex) {
-			// 	System.out.println("Type Check Error: "+ex.getMessage());
-			// }
-		}
-		// catch(RuntimeException ex){
-		// 	System.out.println("Type Check Error: "+ex.getMessage());
-		// }
-		catch(ParseException ex){
-			System.out.println(ex.getMessage());
-		}
-		catch(FileNotFoundException ex){
-			System.err.println(ex.getMessage());
-		}
-		finally{
-			try{
-				if(fis != null) fis.close();
+			if(args.length < 1){
+				System.err.println("No input files");
+				System.exit(1);
 			}
-			catch(IOException ex){
-				System.err.println(ex.getMessage());
+			FileInputStream fis = null;
+			for(int i=0;i<args.length;i++){
+				try{
+					System.out.println("\n---Checking file: "+args[i]+"\n");
+					fis = new FileInputStream(args[i]);
+					MiniJavaParser parser = new MiniJavaParser(fis);
+					System.err.println("Program parsed successfully.");
+					symbolTable = new LinkedHashMap<String,ClassStruct>();
+					fillSTVisitor fillST = new fillSTVisitor();
+					Goal root = parser.Goal();
+					try {
+						root.accept(fillST);
+					} catch (Exception ex) {
+						System.out.println("fill Symbol Table Error: "+ex.getMessage());
+					}
+					
+					printOffsets();
+					
+					TypeCheckVisitor tc = new TypeCheckVisitor();
+					try {
+						root.accept(tc);
+					} catch (Exception ex) {
+						System.out.println("Type Check Error: "+ex.getMessage());
+					}
+				}
+				catch(ParseException ex){
+					System.out.println(ex.getMessage());
+				}
+				catch(FileNotFoundException ex){
+					System.err.println(ex.getMessage());
+				}
+				finally{
+					try{
+						if(fis != null) fis.close();
+					}
+					catch(IOException ex){
+						System.err.println(ex.getMessage());
+					}
+				}
 			}
-		}
     }
 }

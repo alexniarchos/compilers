@@ -64,7 +64,7 @@ public class fillSTVisitor extends GJNoArguDepthFirst<String>{
             // add var to function
             Main.funStruct fun = state.funSt;
             // check for duplicates
-            if(fun.vars.get(id) == null){
+            if(fun.vars.get(id) == null && fun.args.get(id) == null){
                 // unique
                 fun.vars.put(id,type);
             }
@@ -140,7 +140,7 @@ public class fillSTVisitor extends GJNoArguDepthFirst<String>{
         // get class
         Main.ClassStruct tempClass = state.classSt;
         if(tempClass.functions.get(id) != null){
-            throw new Exception("MethodDeclaration: function: " + " already exists!");
+            throw new Exception("MethodDeclaration: function: " + tempClass.functions.get(id).funName + " already exists!");
         }
 
         Main.funStruct tempFun = new Main.funStruct(type, id);
@@ -163,7 +163,13 @@ public class fillSTVisitor extends GJNoArguDepthFirst<String>{
         // add parameters to function
         state.argCount = 0;
         n.f4.accept(this);
-
+        if(tempFun.overridesFun != null){
+            // check argCount 
+            if(state.argCount != tempFun.overridesFun.args.size()){
+                throw new Exception("MessageSend: function "+tempFun.funName+" argument count found "+state.argCount+" expected "+tempFun.overridesFun.args.size());
+            }
+        }
+       
         // add variables
         n.f7.accept(this);
 
