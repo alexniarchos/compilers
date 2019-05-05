@@ -107,7 +107,7 @@ class Main {
 	}
 
 
-    public static void main (String [] args){
+    public static void main (String [] args) throws Exception{
 		if(args.length != 1){
 			System.err.println("Usage: java Driver <inputFile>");
 			System.exit(1);
@@ -120,20 +120,20 @@ class Main {
 			symbolTable = new LinkedHashMap<String,ClassStruct>();
 			fillSTVisitor fillST = new fillSTVisitor();
 			Goal root = parser.Goal();
-			try {
+			// try {
 				root.accept(fillST);
-			} catch (Exception ex) {
-				System.out.println("fill Symbol Table Error: "+ex.getMessage());
-			}
+			// } catch (Exception ex) {
+			// 	System.out.println("fill Symbol Table Error: "+ex.getMessage());
+			// }
 			
 			printOffsets();
 			
 			TypeCheckVisitor tc = new TypeCheckVisitor();
-			try {
+			// try {
 				root.accept(tc);
-			} catch (Exception ex) {
-				System.out.println("Type Check Error: "+ex.getMessage());
-			}
+			// } catch (Exception ex) {
+			// 	System.out.println("Type Check Error: "+ex.getMessage());
+			// }
 		}
 		// catch(RuntimeException ex){
 		// 	System.out.println("Type Check Error: "+ex.getMessage());

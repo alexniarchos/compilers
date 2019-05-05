@@ -3,12 +3,14 @@ import visitor.GJNoArguDepthFirst;
 import java.lang.System;
 import java.util.Map.Entry;
 import java.util.ArrayList;
+import java.util.Map;
 
 public class TypeCheckVisitor extends GJNoArguDepthFirst<String>{
 
     public class State{
         public Main.ClassStruct classSt;
         public Main.funStruct funSt;
+        public Main.funStruct messageSendFun;
         public String varOf;
         public Integer argCount;
     }
@@ -86,7 +88,7 @@ public class TypeCheckVisitor extends GJNoArguDepthFirst<String>{
         String id = n.f1.accept(this);
         // check that type exists
         if(Main.symbolTable.get(type)==null && !type.equals("int") && !type.equals("boolean") && !type.equals("int[]")){
-            throw new Exception("Type: "+type+" doesn't exist");
+            throw new Exception("VarDeclaration: Type: "+type+" doesn't exist");
         }
         return null;
     }
@@ -101,7 +103,7 @@ public class TypeCheckVisitor extends GJNoArguDepthFirst<String>{
 
         // check that type exists
         if(Main.symbolTable.get(type)==null && !type.equals("int") && !type.equals("boolean") && !type.equals("int[]")){
-            throw new Exception("Type: "+type+" doesn't exist");
+            throw new Exception("FormalParameter: Type: "+type+" doesn't exist");
         }
 
         return null;
@@ -146,7 +148,7 @@ public class TypeCheckVisitor extends GJNoArguDepthFirst<String>{
         else{
             return type;
         }
-        throw new Exception("Function: "+state.funSt.funName+" return type found: "+exprType+" expected: "+type);
+        throw new Exception("MethodDeclaration: Function: "+state.funSt.funName+" return type found: "+exprType+" expected: "+type);
     }
 
     /**
@@ -203,9 +205,8 @@ public class TypeCheckVisitor extends GJNoArguDepthFirst<String>{
         String exprType = n.f2.accept(this);
         String idType = findTypeOf(id);
         if(idType == null){
-            throw new Exception("Variable: "+id+" hasn't been declared");
+            throw new Exception("AssignmentStatement: Variable: "+id+" hasn't been declared");
         }
-        // todo: if id type is subclass of expr type then allow it
         if(!idType.equals(exprType)){
             Main.ClassStruct tempClass = Main.symbolTable.get(state.classSt.parentName); 
             while(tempClass!=null){
@@ -214,7 +215,7 @@ public class TypeCheckVisitor extends GJNoArguDepthFirst<String>{
                 }
                 tempClass = Main.symbolTable.get(tempClass.parentName);
             }
-            throw new Exception("Types: "+idType+" and "+exprType+" don't match");
+            throw new Exception("AssignmentStatement: Types: id = "+id+", type = "+idType+" and "+exprType+" don't match");
         }
         return null;
     }
@@ -230,21 +231,33 @@ public class TypeCheckVisitor extends GJNoArguDepthFirst<String>{
     */
     public String visit(ArrayAssignmentStatement n) throws Exception{
         String id = n.f0.accept(this);
-        if(state.funSt.vars.get(id)==null){
-            throw new Exception("Variable: "+id+" hasn't been declared");
+        String expr = n.f2.accept(this);
+        String expr2 = n.f5.accept(this);
+
+        String t = findTypeOf(id);
+
+        if(t!=null){
+            if(t.equals("int[]")){
+                if(expr.equals("int")){
+                    if(expr2.equals("int")){
+                        // yes
+                        return null;
+                    }
+                    else{
+                        throw new Exception("ArrayAssignmentStatement: Types: t1 = "+t+" and expr2 = "+expr2+" don't match");
+                    }
+                }
+                else{
+                    throw new Exception("ArrayAssignmentStatement: Types: t1 = "+t+" and expr = "+expr+" don't match");
+                }
+            }
+            else{
+                throw new Exception("ArrayAssignmentStatement: Variable: "+id+" should be of type int[], found "+t);
+            }
         }
-        if(!state.funSt.vars.get(id).equals("int[]")){
-            throw new Exception("Variable: "+id+" should be of type int[], found "+state.funSt.vars.get(id));
+        else{
+            throw new Exception("ArrayAssignmentStatement: Variable: "+id+" hasn't been declared");
         }
-        String exprType = n.f2.accept(this);
-        if(!state.funSt.vars.get(id).equals("int")){
-            throw new Exception("Types: "+state.funSt.vars.get(id)+" and "+exprType+" don't match");
-        }
-        String exprType2 = n.f5.accept(this);
-        if(!state.funSt.vars.get(id).equals("int")){
-            throw new Exception("Types: "+state.funSt.vars.get(id)+" and "+exprType2+" don't match");
-        }
-        return null;
     }
 
     /**
@@ -259,7 +272,7 @@ public class TypeCheckVisitor extends GJNoArguDepthFirst<String>{
     public String visit(IfStatement n) throws Exception{
         String exprType = n.f2.accept(this);
         if(!exprType.equals("boolean")){
-            throw new Exception("If Expression: should be of type boolean, found: "+exprType);
+            throw new Exception("IfStatement: should be of type boolean, found: "+exprType);
         }
         n.f4.accept(this);
         n.f6.accept(this);
@@ -276,7 +289,7 @@ public class TypeCheckVisitor extends GJNoArguDepthFirst<String>{
     public String visit(WhileStatement n) throws Exception{
         String exprType = n.f2.accept(this);
         if(!exprType.equals("boolean")){
-            throw new Exception("While Expression: should be of type boolean, found: "+exprType);
+            throw new Exception("WhileStatement: should be of type boolean, found: "+exprType);
         }
         n.f4.accept(this);
         return null;
@@ -292,7 +305,7 @@ public class TypeCheckVisitor extends GJNoArguDepthFirst<String>{
     public String visit(PrintStatement n) throws Exception{
         String exprType = n.f2.accept(this);
         if(!exprType.equals("int") && !exprType.equals("boolean")){
-            throw new Exception("Print Expression: should be of type int or boolean, found: "+exprType);
+            throw new Exception("PrintStatement: should be of type int or boolean, found: "+exprType);
         }
         return null;
     }
@@ -320,7 +333,7 @@ public class TypeCheckVisitor extends GJNoArguDepthFirst<String>{
         String t1 = n.f0.accept(this);
         String t2 = n.f2.accept(this);
         if(t1.equals("int") && t2.equals("int")){
-            return new String("int");
+            return new String("boolean");
         }
         throw new Exception("CompareExpression: t1 = "+t1+", t2 = "+t2+" should be both int");
     }
@@ -379,7 +392,7 @@ public class TypeCheckVisitor extends GJNoArguDepthFirst<String>{
         if(t1.equals("int[]") && t2.equals("int")){
             return new String("int");
         }
-        throw new Exception("ArrayLookup: t1 = "+t1+", t2 = "+t2+" should be int[], int");
+        throw new Exception("ArrayLookup: t1 = "+t1+", t2 = "+t2+" should be int, int[]");
     }
 
     /**
@@ -461,11 +474,14 @@ public class TypeCheckVisitor extends GJNoArguDepthFirst<String>{
             // couldnt find function
             throw new Exception("MessageSend: function "+funId+" hasn't been declared");
         }
-        Main.funStruct oldfun = state.funSt;
-        state.funSt = tempFun;
+        Main.funStruct oldfun = state.messageSendFun;
+        state.messageSendFun = tempFun;
         state.argCount=0;
         n.f4.accept(this);
-        state.funSt = oldfun;
+        if(state.argCount != state.messageSendFun.args.size()){
+            throw new Exception("MessageSend: function "+funId+" argument count found "+state.argCount+" expected "+state.messageSendFun.args.size());
+        }
+        state.messageSendFun = oldfun;
         return tempFun.returnType;
     }
 
@@ -475,11 +491,23 @@ public class TypeCheckVisitor extends GJNoArguDepthFirst<String>{
     */
     public String visit(ExpressionList n) throws Exception {
         String expr = n.f0.accept(this);
-        Main.funStruct tempFun = state.funSt;
+        Main.funStruct tempFun = state.messageSendFun;
         ArrayList<Entry<String, String>> arglist = new ArrayList<Entry<String,String>> (tempFun.args.entrySet()); 
-        if(!arglist.get(state.argCount).getValue().equals(expr)){
-            throw new Exception("ExpressionList: Function: "+tempFun.funName+ " found: "+expr+" ,expected: "+arglist.get(state.argCount).getValue());
+        if(state.argCount < arglist.size() && !arglist.get(state.argCount).getValue().equals(expr)){
+            // check if it is subtype
+            Main.ClassStruct tempClass = Main.symbolTable.get(expr);
+            tempClass = Main.symbolTable.get(tempClass.parentName);
+            while(tempClass!=null){
+                if(arglist.get(state.argCount).getValue().equals(tempClass.className)){
+                    state.argCount++;
+                    n.f1.accept(this);
+                    return null;
+                }
+                tempClass = Main.symbolTable.get(tempClass.parentName);
+            }
+            throw new Exception("ExpressionList: Class: "+state.classSt.className+" Function: "+tempFun.funName+ " found: "+expr+" ,expected: "+arglist.get(state.argCount).getValue());
         }
+        state.argCount++;
         n.f1.accept(this);
         return null;
     }
@@ -490,11 +518,12 @@ public class TypeCheckVisitor extends GJNoArguDepthFirst<String>{
     */
     public String visit(ExpressionTerm n) throws Exception {
         String expr = n.f1.accept(this);
-        Main.funStruct tempFun = state.funSt;
+        Main.funStruct tempFun = state.messageSendFun;
         ArrayList<Entry<String, String>> arglist = new ArrayList<Entry<String,String>> (tempFun.args.entrySet()); 
-        if(!arglist.get(state.argCount).getValue().equals(expr)){
-            throw new Exception("ExpressionTerm: Function: "+tempFun.funName+ " found: "+expr+" ,expected: "+arglist.get(state.argCount).getValue());
+        if(state.argCount < arglist.size() && !arglist.get(state.argCount).getValue().equals(expr)){
+            throw new Exception("ExpressionTerm: Class: "+state.classSt.className+" Function: "+tempFun.funName+ " found: "+expr+" ,expected: "+arglist.get(state.argCount).getValue());
         }
+        state.argCount++;
         return null;
     }
 
@@ -510,7 +539,13 @@ public class TypeCheckVisitor extends GJNoArguDepthFirst<String>{
     */
     public String visit(PrimaryExpression n) throws Exception {
         String id = n.f0.accept(this);
-        if(!id.equals("int") && !id.equals("boolean") && !id.equals("this")){
+        if(id.equals("this")){
+            return state.classSt.className;
+        }
+        else if(!id.equals("int") && !id.equals("boolean") && !id.equals("int[]")){
+            if(Main.symbolTable.get(id)!=null){
+                return id;
+            }
             String type = findTypeOf(id);
             if(type!=null){
                 return type;
@@ -530,7 +565,7 @@ public class TypeCheckVisitor extends GJNoArguDepthFirst<String>{
     public String visit(ArrayAllocationExpression n) throws Exception {
         String expr = n.f3.accept(this);
         if(expr.equals("int")){
-            return new String("int");
+            return new String("int[]");
         }
         throw new Exception("ArrayAllocationExpression: expr = "+expr+" should be int");
     }

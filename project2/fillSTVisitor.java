@@ -69,7 +69,7 @@ public class fillSTVisitor extends GJNoArguDepthFirst<String>{
                 fun.vars.put(id,type);
             }
             else{
-                throw new Exception("Variable " + id + " has already been declared");
+                throw new Exception("VarDeclaration: Variable " + id + " has already been declared");
             }
         }
         else if(state.varOf.equals("class")){
@@ -79,8 +79,13 @@ public class fillSTVisitor extends GJNoArguDepthFirst<String>{
                 // unique
                 classST.dataMembers.put(id,type);
             }
+            else{
+                throw new Exception("VarDeclaration: Variable " + id + " has already been declared");
+            }
         }
-
+        else{
+            throw new Exception("VarDeclaration: VarOf = " + state.varOf);
+        }
         return null;
     }
 
@@ -97,13 +102,15 @@ public class fillSTVisitor extends GJNoArguDepthFirst<String>{
 
         if(tempFun.overridesFun != null){
             ArrayList<Entry<String, String>> arglist = new ArrayList<Entry<String,String>> (tempFun.args.entrySet()); 
-            if(! arglist.get(state.argCount).getValue().equals(type)){
-                throw new Exception("Function: "+tempFun.funName+ " found: "+type+" ,expected: "+arglist.get(state.argCount).getValue());
+            if(state.argCount < arglist.size() && !arglist.get(state.argCount).getValue().equals(type)){
+                throw new Exception("FormalParameter: Function: "+tempFun.funName+ " found: "+type+" ,expected: "+arglist.get(state.argCount).getValue());
             }
+            tempFun.args.put(id,type);
+            state.argCount++;
         }
         else{
             if(tempFun.args.get(id) != null){
-                throw new Exception("Function: "+tempFun.funName+" argument: " + id + " already exists!");
+                throw new Exception("FormalParameter: Function: "+tempFun.funName+" argument: " + id + " already exists!");
             }
             tempFun.args.put(id,type);
             state.argCount++;
@@ -133,7 +140,7 @@ public class fillSTVisitor extends GJNoArguDepthFirst<String>{
         // get class
         Main.ClassStruct tempClass = state.classSt;
         if(tempClass.functions.get(id) != null){
-            throw new Exception("function: " + " already exists!");
+            throw new Exception("MethodDeclaration: function: " + " already exists!");
         }
 
         Main.funStruct tempFun = new Main.funStruct(type, id);
@@ -176,7 +183,7 @@ public class fillSTVisitor extends GJNoArguDepthFirst<String>{
         String id = n.f1.accept(this);
         // check duplicate class name
         if(Main.symbolTable.get(id)!=null){
-            throw new Exception("Class "+id+" has already been declared");
+            throw new Exception("ClassDeclaration: Class "+id+" has already been declared");
         }
         Main.ClassStruct tempClass = new Main.ClassStruct(id,null);
         Main.symbolTable.put(id,tempClass);
@@ -205,12 +212,12 @@ public class fillSTVisitor extends GJNoArguDepthFirst<String>{
 
         // check duplicates
         if(Main.symbolTable.get(id)!=null){
-            throw new Exception("class: "+id+" already exists");
+            throw new Exception("ClassExtendsDeclaration: class: "+id+" already exists");
         }
 
         // parent must be declared before extend
         if(Main.symbolTable.get(extId)==null){
-            throw new Exception("parent class: "+extId+" hasn't been declared before");
+            throw new Exception("ClassExtendsDeclaration: parent class: "+extId+" hasn't been declared before");
         }
 
         Main.ClassStruct tempClass = new Main.ClassStruct(id, extId);
