@@ -558,7 +558,7 @@ public class TypeCheckVisitor extends GJNoArguDepthFirst<String>{
             return state.classSt.className;
         }
         else if(!id.equals("int") && !id.equals("boolean") && !id.equals("int[]")){
-            if(Main.symbolTable.get(id)!=null){
+            if(Main.symbolTable.get(id)!=null && n.f0.which == 6){
                 return id;
             }
             String type = findTypeOf(id);

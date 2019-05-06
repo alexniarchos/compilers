@@ -1,26 +1,15 @@
-class NoMatchingMethod {
+class Main {
 
     public static void main(String[] args){
-        A a;
-        B b;
-        a = new A ();
-        b = new B ();
-        a = a.foo(b);
+        A A;
+        A = new A ();
     }
 
 }
 
 
 class A {
-
-
-    public A foo(A a){
-        return a;
-    }
-
-}
-
-class B {
-
-
+  public B foo(){
+    return new B();
+  }
 }
