@@ -557,6 +557,9 @@ public class TypeCheckVisitor extends GJNoArguDepthFirst<String>{
         if(id.equals("this")){
             return state.classSt.className;
         }
+        else if(n.f0.which == 7){
+            return id;
+        }
         else if(!id.equals("int") && !id.equals("boolean") && !id.equals("int[]")){
             if(Main.symbolTable.get(id)!=null && n.f0.which == 6){
                 return id;
@@ -567,7 +570,7 @@ public class TypeCheckVisitor extends GJNoArguDepthFirst<String>{
             }
             throw new Exception("PrimaryExpression: Variable: "+id+" hasn't been declared");
         }
-        return n.f0.accept(this);
+        return id;
     }
 
     /**
