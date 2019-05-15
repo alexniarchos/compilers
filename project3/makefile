@@ -5,11 +5,15 @@ compile:
 	java -jar ./javacc5.jar minijava-jtb.jj
 	javac Main.java
 
-c:
+c: 
 	javac Main.java
 
+cr:
+	javac Main.java
+	java Main ./testcases/Factorial.java
+
 r:
-	java Main ./testcases/Factorial.ll
+	java Main ./testcases/Factorial.java
 
 clean:
 	rm -f *.class *~
