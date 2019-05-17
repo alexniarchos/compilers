@@ -10,10 +10,10 @@ c:
 
 cr:
 	javac Main.java
-	java Main ./testcases/Factorial.java
+	java Main ./testcases/TreeVisitor.java
 
 r:
-	java Main ./testcases/Factorial.java
+	java Main ./testcases/TreeVisitor.java
 
 clean:
 	rm -f *.class *~
