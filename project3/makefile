@@ -10,7 +10,7 @@ c:
 
 cr:
 	javac Main.java
-	java Main ./testcases/TreeVisitor.java
+	java Main ./testcases/Factorial.java
 
 r:
 	java Main ./testcases/TreeVisitor.java
