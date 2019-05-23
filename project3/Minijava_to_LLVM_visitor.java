@@ -7,6 +7,11 @@ import java.util.Map;
 public class Minijava_to_LLVM_visitor extends GJNoArguDepthFirst<String>{
 
     private int registerCount;
+    private int loopCount;
+    private int ifCount;
+    private int oobCount;
+    private int arr_allocCount;
+    private int andclauseCount;
 
     public class State{
         public Main.ClassStruct classSt;
@@ -353,28 +358,58 @@ public class Minijava_to_LLVM_visitor extends GJNoArguDepthFirst<String>{
 
         String idType = findTypeOf(id);
 
-        type = llvmType(idType);
+        String type = llvmType(idType);
         state.exprType = type;
-        // local variable
+        int temp,temp2,temp3;
+        // load identifier
         if(state.varOrigin.equals("local") || state.varOrigin.equals("argument")){
-            int tempReg = this.registerCount++;
-            emit("\t"+tempReg+" = load "+type+", "+type+"* %"+id+"\n");
-            return Integer.toString(tempReg);
+            // local variable
+            temp3 = this.registerCount++;
+            emit("\t%_"+temp3+" = load i32*, i32** %"+id+"\n");
         }
         else{
             // class field
             VTable vtable = Main.VTables.get(state.classSt.className);
-            int temp = this.registerCount++;
-            int temp2 = this.registerCount++;
+            temp = this.registerCount++;
+            temp2 = this.registerCount++;
+            temp3 = this.registerCount++;
+
             emit("\t%_"+ temp + " = getelementptr i8, i8* %this, i32 "+(vtable.dataMembers.get(id) + 8) +"\n");
-            emit("\t%_"+ temp2 + " = bitcast i8* %_" + temp + " to " + type + "*\n");
-            emit("\t"+temp+" = load "+type+", "+type+"* %"+temp2+"\n");
-            return Integer.toString(temp);
+            emit("\t%_"+ temp2 + " = bitcast i8* %_" + temp + " to i32**\n");
+            emit("\t%_"+ temp3 + " = load i32*, i32** "+temp2+"\n");
         }
-        
-        
+
+        temp = this.registerCount++;
+        temp2 = this.registerCount++;
+
+        emit("\t%_"+temp+" = load i32, i32* %_"+temp3+"\n");
+        emit("\t%_"+temp2+" = icmp ult "+expr+", %_"+temp+"\n");
+
+        int label = this.oobCount++;
+        int label2 = this.oobCount++;
+        int label3 = this.oobCount++;
+
+        emit("\tbr i1 %_"+temp2+", label %oob"+label+", label %oob"+label2+"\n");
+        emit("\noob"+ label + ":\n");
+        temp = this.registerCount++;
+        temp2 = this.registerCount++;
+        emit("\t%_"+temp+" = add "+state.exprType+" "+expr+", 1\n");
+        emit("\t%_"+temp2+" = getelementptr i32, i32* %_"+temp3+", i32 %_"+temp+"\n");
+        emit("\tstore "+expr2+", i32* %_"+temp2+"\n");
+
+        label = this.oobCount++;
+
+        emit("\tbr label %oob"+label3+"\n");
+
+        emit("oob"+label2 + ":\n");
+		emit("\t" + "call void @throw_oob()\n");
+		emit("\t" + "br label %oob" + label3+"\n");
+
+		emit("oob"+label3 + ":\n"); /* continue other Statements or return */
         return null;
     }
+
+
 
 
 
@@ -408,8 +443,8 @@ public class Minijava_to_LLVM_visitor extends GJNoArguDepthFirst<String>{
             // local variable
             if(state.varOrigin.equals("local") || state.varOrigin.equals("argument")){
                 int tempReg = this.registerCount++;
-                emit("\t"+tempReg+" = load "+type+", "+type+"* %"+expr+"\n");
-                return Integer.toString(tempReg);
+                emit("\t%_"+tempReg+" = load "+type+", "+type+"* %"+expr+"\n");
+                return "%_"+tempReg;
             }
             else{
                 // class field
@@ -418,8 +453,8 @@ public class Minijava_to_LLVM_visitor extends GJNoArguDepthFirst<String>{
                 int temp2 = this.registerCount++;
                 emit("\t%_"+ temp + " = getelementptr i8, i8* %this, i32 "+(vtable.dataMembers.get(expr) + 8) +"\n");
                 emit("\t%_"+ temp2 + " = bitcast i8* %_" + temp + " to " + type + "*\n");
-                emit("\t"+temp+" = load "+type+", "+type+"* %"+temp2+"\n");
-                return Integer.toString(temp);
+                emit("\t%_"+temp+" = load "+type+", "+type+"* %_"+temp2+"\n");
+                return "%_"+temp;
             }
             
         }

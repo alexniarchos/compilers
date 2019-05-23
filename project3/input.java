@@ -1,5 +1,7 @@
 class Factorial{
     public static void main(String[] arg){
+        int[] x;
+        x = new int[10];
         x[0] = 1;
     }
 }
