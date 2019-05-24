@@ -1,14 +1,13 @@
 class Factorial{
     public static void main(String[] arg){
         int[] x;
-        int a;
-        int b;
-        int c;
+        boolean a;
+        boolean b;
+        boolean c;
         
-        c = 1;
-        while(c<2){
-            c = c+1;
-        }
+        a = true;
+        b = false;
+        c = a && b;
     }
 }
 

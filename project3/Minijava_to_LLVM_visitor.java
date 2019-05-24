@@ -336,7 +336,7 @@ public class Minijava_to_LLVM_visitor extends GJNoArguDepthFirst<String>{
             int temp2 = this.registerCount++; 
             emit("\t%_"+ temp + " = getelementptr i8, i8* %this, i32 "+(vtable.dataMembers.get(id) + 8) +"\n");
             emit("\t%_"+ temp2 + " = bitcast i8* %_" + temp + " to " + llvmType(idType) + "*\n");
-			emit("\tstore " + state.exprType + " " + expr + ", " + llvmType(idType) + "* %_" + temp2+"\n");
+			emit("\tstore " + expr + ", " + llvmType(idType) + "* %_" + temp2+"\n");
         }
 
         return null;
@@ -359,7 +359,6 @@ public class Minijava_to_LLVM_visitor extends GJNoArguDepthFirst<String>{
         String idType = findTypeOf(id);
 
         String type = llvmType(idType);
-        state.exprType = type;
         int temp,temp2,temp3;
         // load identifier
         if(state.varOrigin.equals("local") || state.varOrigin.equals("argument")){
@@ -393,7 +392,7 @@ public class Minijava_to_LLVM_visitor extends GJNoArguDepthFirst<String>{
         emit("\noob"+ label + ":\n");
         temp = this.registerCount++;
         temp2 = this.registerCount++;
-        emit("\t%_"+temp+" = add "+state.exprType+" "+expr+", 1\n");
+        emit("\t%_"+temp+" = add "+expr+", 1\n");
         emit("\t%_"+temp2+" = getelementptr i32, i32* %_"+temp3+", i32 %_"+temp+"\n");
         emit("\tstore "+expr2+", i32* %_"+temp2+"\n");
 
@@ -451,7 +450,7 @@ public class Minijava_to_LLVM_visitor extends GJNoArguDepthFirst<String>{
         emit("\tbr label %loopstart"+label1+"\n");
         emit("loopstart"+label1+":\n");
         String expr = n.f2.accept(this);
-        emit("\tbr "+state.exprType+" "+expr+", label %next"+label2+", label %end"+label3+"\n");
+        emit("\tbr "+expr+", label %next"+label2+", label %end"+label3+"\n");
         emit("next"+label2+":\n");
         n.f4.accept(this);
         emit("\tbr label %loopstart"+label1+"\n");
@@ -479,9 +478,23 @@ public class Minijava_to_LLVM_visitor extends GJNoArguDepthFirst<String>{
     */
     public String visit(AndExpression n) throws Exception {
         String t1 = n.f0.accept(this);
-        String t2 = n.f2.accept(this);
 
-        return null;
+        int label1 = this.andclauseCount++;
+        int label2 = this.andclauseCount++;
+        int label3 = this.andclauseCount++;
+        int label4 = this.andclauseCount++;
+        emit("\tbr label %andclause"+label1+"\n");
+        emit("andclause"+label1+":\n");
+        emit("\tbr "+t1+", label %andclause"+label2+", label %andclause"+label4+"\n");
+        emit("andclause"+label2+":\n");
+        String t2 = n.f2.accept(this);
+        emit("\tbr label %andclause"+label3+"\n");
+        emit("andclause"+label3+":\n");
+        emit("\tbr label %andclause"+label4+"\n");
+        emit("andclause"+label4+":\n");
+        int temp = this.registerCount++;
+        emit("\t%_"+temp+" = phi i1 [ 0, %andclause" + label1 + " ], [ " + t2 +", %andclause" + label3 + " ]\n");
+        return "i1 %_"+temp;
     }
 
 
@@ -499,24 +512,21 @@ public class Minijava_to_LLVM_visitor extends GJNoArguDepthFirst<String>{
         String expr = n.f0.accept(this);
         // int
         if(n.f0.which == 0){
-            state.exprType = "i32";
-            return expr;
+            return "i32 "+expr;
         }
         // boolean
         else if(n.f0.which == 1 || n.f0.which == 2){
-            state.exprType = "i8";
-            return expr;
+            return "i8 "+expr;
         }
         // id
         else if(n.f0.which == 3){
             String type = findTypeOf(expr);
             type = llvmType(type);
-            state.exprType = type;
             // local variable
             if(state.varOrigin.equals("local") || state.varOrigin.equals("argument")){
                 int tempReg = this.registerCount++;
                 emit("\t%_"+tempReg+" = load "+type+", "+type+"* %"+expr+"\n");
-                return "%_"+tempReg;
+                return type+" %_"+tempReg;
             }
             else{
                 // class field
@@ -526,7 +536,7 @@ public class Minijava_to_LLVM_visitor extends GJNoArguDepthFirst<String>{
                 emit("\t%_"+ temp + " = getelementptr i8, i8* %this, i32 "+(vtable.dataMembers.get(expr) + 8) +"\n");
                 emit("\t%_"+ temp2 + " = bitcast i8* %_" + temp + " to " + type + "*\n");
                 emit("\t%_"+temp+" = load "+type+", "+type+"* %_"+temp2+"\n");
-                return "%_"+temp;
+                return type+" %_"+temp;
             }
             
         }
