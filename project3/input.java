@@ -1,8 +1,14 @@
 class Factorial{
     public static void main(String[] arg){
         int[] x;
-        x = new int[10];
-        x[0] = 1;
+        int a;
+        int b;
+        int c;
+        
+        c = 1;
+        while(c<2){
+            c = c+1;
+        }
     }
 }
 

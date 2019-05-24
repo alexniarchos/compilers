@@ -409,8 +409,80 @@ public class Minijava_to_LLVM_visitor extends GJNoArguDepthFirst<String>{
         return null;
     }
 
+    /**
+    * f0 -> "if"
+    * f1 -> "("
+    * f2 -> Expression()
+    * f3 -> ")"
+    * f4 -> Statement()
+    * f5 -> "else"
+    * f6 -> Statement()
+    */
+    public String visit(IfStatement n) throws Exception{
+        String expr = n.f2.accept(this);
+        int label1 = this.ifCount++;
+        int label2 = this.ifCount++;
+        int label3 = this.ifCount++;
 
+        emit("\tbr "+expr+", label %if"+label1+", label %if"+label2+"\n");
+        emit("if"+label1+":\n");
 
+        n.f4.accept(this);
+        emit("\tbr label %if"+label3+"\n");
+        emit("if"+label2+":\n");
+        n.f6.accept(this);
+        emit("\tbr label %if"+label3+"\n");
+        emit("if"+label3+":\n");
+        return null;
+    }
+
+    /**
+     * f0 -> "while"
+    * f1 -> "("
+    * f2 -> Expression()
+    * f3 -> ")"
+    * f4 -> Statement()
+    */
+    public String visit(WhileStatement n) throws Exception{
+        int label1 = this.loopCount++;
+        int label2 = this.loopCount++;
+        int label3 = this.loopCount++;
+
+        emit("\tbr label %loopstart"+label1+"\n");
+        emit("loopstart"+label1+":\n");
+        String expr = n.f2.accept(this);
+        emit("\tbr "+state.exprType+" "+expr+", label %next"+label2+", label %end"+label3+"\n");
+        emit("next"+label2+":\n");
+        n.f4.accept(this);
+        emit("\tbr label %loopstart"+label1+"\n");
+        emit("end"+label3+":\n");
+        return null;
+    }
+
+    /**
+     * f0 -> "System.out.println"
+    * f1 -> "("
+    * f2 -> Expression()
+    * f3 -> ")"
+    * f4 -> ";"
+    */
+    public String visit(PrintStatement n) throws Exception{
+        String expr = n.f2.accept(this);
+        emit("\tcall void (i32) @print_int(" + expr +")");
+        return null;
+    }
+
+    /**
+    * f0 -> Clause()
+    * f1 -> "&&"
+    * f2 -> Clause()
+    */
+    public String visit(AndExpression n) throws Exception {
+        String t1 = n.f0.accept(this);
+        String t2 = n.f2.accept(this);
+
+        return null;
+    }
 
 
     /**
@@ -460,6 +532,8 @@ public class Minijava_to_LLVM_visitor extends GJNoArguDepthFirst<String>{
         }
         return null;
     }
+
+
 
     /**
     * f0 -> <INTEGER_LITERAL>
