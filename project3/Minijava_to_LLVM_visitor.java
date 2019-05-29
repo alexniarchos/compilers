@@ -3,8 +3,10 @@ import visitor.GJNoArguDepthFirst;
 import java.lang.System;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.ArrayList;
 
-public class Minijava_to_LLVM_visitor extends GJNoArguDepthFirst<String>{
+public class Minijava_to_LLVM_visitor extends GJNoArguDepthFirst<exprInfo>{
 
     private int registerCount;
     private int loopCount;
@@ -18,10 +20,11 @@ public class Minijava_to_LLVM_visitor extends GJNoArguDepthFirst<String>{
         public Main.funStruct funSt;
         public Main.funStruct messageSendFun;
         public String varOf;
-        public Integer argCount;
         public String tempStr;
         public String exprType;
         public String varOrigin;
+        public ArrayList<String> args; 
+        public ArrayList<Integer> argsCount;
     }
 
     public State state = new State();
@@ -29,6 +32,9 @@ public class Minijava_to_LLVM_visitor extends GJNoArguDepthFirst<String>{
     public Minijava_to_LLVM_visitor(){
         fillVTables();
         printVTables();
+
+        state.args = new ArrayList<String>();
+        state.argsCount = new ArrayList<Integer>();
 
         emit("\ndeclare i8* @calloc(i32, i32)\n"+
         "declare i32 @printf(i8*, ...)\n"+
@@ -205,10 +211,9 @@ public class Minijava_to_LLVM_visitor extends GJNoArguDepthFirst<String>{
     * f16 -> "}"
     * f17 -> "}"
     */
-    public String visit(MainClass n) throws Exception {
-        String className = n.f1.accept(this);
-        String argName = n.f11.accept(this);
-        state.classSt = Main.symbolTable.get(className);
+    public exprInfo visit(MainClass n) throws Exception {
+        exprInfo className = n.f1.accept(this);
+        state.classSt = Main.symbolTable.get(className.value);
         state.funSt = state.classSt.functions.get("main");
         emit("define i32 @main() {\n");
         n.f14.accept(this);
@@ -225,10 +230,10 @@ public class Minijava_to_LLVM_visitor extends GJNoArguDepthFirst<String>{
     * f4 -> ( MethodDeclaration() )*
     * f5 -> "}"
     */
-    public String visit(ClassDeclaration n) throws Exception{
+    public exprInfo visit(ClassDeclaration n) throws Exception{
         // get class name
-        String id = n.f1.accept(this);
-        state.classSt = Main.symbolTable.get(id);
+        exprInfo id = n.f1.accept(this);
+        state.classSt = Main.symbolTable.get(id.value);
 
         state.varOf = "function";
         n.f4.accept(this);
@@ -245,11 +250,11 @@ public class Minijava_to_LLVM_visitor extends GJNoArguDepthFirst<String>{
     * f6 -> ( MethodDeclaration() )*
     * f7 -> "}"
     */
-    public String visit(ClassExtendsDeclaration n) throws Exception{
-        String id = n.f1.accept(this);
-        String extId = n.f3.accept(this);
+    public exprInfo visit(ClassExtendsDeclaration n) throws Exception{
+        exprInfo id = n.f1.accept(this);
+        exprInfo extId = n.f3.accept(this);
 
-        state.classSt = Main.symbolTable.get(id);
+        state.classSt = Main.symbolTable.get(id.value);
 
         state.varOf = "function";
         n.f6.accept(this);
@@ -261,11 +266,11 @@ public class Minijava_to_LLVM_visitor extends GJNoArguDepthFirst<String>{
     * f1 -> Identifier()
     * f2 -> ";"
     */
-    public String visit(VarDeclaration n) throws Exception{
-        String type = n.f0.accept(this);
-        String id = n.f1.accept(this);
+    public exprInfo visit(VarDeclaration n) throws Exception{
+        exprInfo type = n.f0.accept(this);
+        exprInfo id = n.f1.accept(this);
         
-        emit("\t%"+id+" = alloca " + llvmType(type)+"\n");
+        emit("\t%"+id.value+" = alloca " + llvmType(type.value)+"\n");
         return null;
     }
 
@@ -284,20 +289,20 @@ public class Minijava_to_LLVM_visitor extends GJNoArguDepthFirst<String>{
     * f11 -> ";"
     * f12 -> "}"
     */
-    public String visit(MethodDeclaration n) throws Exception{
+    public exprInfo visit(MethodDeclaration n) throws Exception{
         this.registerCount=0;
-        String type = n.f1.accept(this);
-        String id = n.f2.accept(this);
-        state.funSt = state.classSt.functions.get(id);
-        emit("define "+llvmType(type)+" @"+state.classSt.className+"."+id+"(i8* %this");
+        exprInfo type = n.f1.accept(this);
+        exprInfo id = n.f2.accept(this);
+        state.funSt = state.classSt.functions.get(id.value);
+        emit("define "+llvmType(type.value)+" @"+state.classSt.className+"."+id.value+"(i8* %this");
         state.tempStr = "";
         n.f4.accept(this);
         emit("){\n");
         emit(state.tempStr);
         n.f7.accept(this);
         n.f8.accept(this);
-        String exprString= n.f10.accept(this);
-        emit("\tret "+llvmType(type)+" "+ exprString +"\n}\n\n");
+        exprInfo exprString= n.f10.accept(this);
+        emit("\tret "+llvmType(type.value)+" "+ exprString.value +"\n}\n\n");
         return null;
     }
 
@@ -305,12 +310,12 @@ public class Minijava_to_LLVM_visitor extends GJNoArguDepthFirst<String>{
     * f0 -> Type()
     * f1 -> Identifier()
     */
-    public String visit(FormalParameter n) throws Exception{
-        String type = n.f0.accept(this);
-        String id = n.f1.accept(this);
+    public exprInfo visit(FormalParameter n) throws Exception{
+        exprInfo type = n.f0.accept(this);
+        exprInfo id = n.f1.accept(this);
 
-        emit(", "+llvmType(type)+" %."+id);
-        state.tempStr += "\t%"+id+" = alloca "+llvmType(type)+"\n\tstore "+llvmType(type)+" %."+id+", "+llvmType(type)+"* %"+id+"\n";
+        emit(", "+llvmType(type.value)+" %."+id.value);
+        state.tempStr += "\t%"+id.value+" = alloca "+llvmType(type.value)+"\n\tstore "+llvmType(type.value)+" %."+id.value+", "+llvmType(type.value)+"* %"+id.value+"\n";
         return null;
     }
 
@@ -320,23 +325,23 @@ public class Minijava_to_LLVM_visitor extends GJNoArguDepthFirst<String>{
     * f2 -> Expression()
     * f3 -> ";"
     */
-    public String visit(AssignmentStatement n) throws Exception{
-        String id = n.f0.accept(this);
-        String expr = n.f2.accept(this);
-        String idType = findTypeOf(id);
+    public exprInfo visit(AssignmentStatement n) throws Exception{
+        exprInfo id = n.f0.accept(this);
+        exprInfo expr = n.f2.accept(this);
+        String idType = findTypeOf(id.value);
 
         // local variable
-        if(state.funSt.args.get(id)!=null || state.funSt.vars.get(id)!=null){
-            emit("\tstore "+expr+", "+llvmType(idType)+"* %"+id+"\n");
+        if(state.funSt.args.get(id.value)!=null || state.funSt.vars.get(id.value)!=null){
+            emit("\tstore "+expr.type+" "+expr.value+", "+llvmType(idType)+"* %"+id.value+"\n");
         }
         else{
             // class field
             VTable vtable = Main.VTables.get(state.classSt.className);
             int temp = this.registerCount++; 
             int temp2 = this.registerCount++; 
-            emit("\t%_"+ temp + " = getelementptr i8, i8* %this, i32 "+(vtable.dataMembers.get(id) + 8) +"\n");
+            emit("\t%_"+ temp + " = getelementptr i8, i8* %this, i32 "+(vtable.dataMembers.get(id.value) + 8) +"\n");
             emit("\t%_"+ temp2 + " = bitcast i8* %_" + temp + " to " + llvmType(idType) + "*\n");
-			emit("\tstore " + expr + ", " + llvmType(idType) + "* %_" + temp2+"\n");
+			emit("\tstore " + expr.type+" "+expr.value + ", " + llvmType(idType) + "* %_" + temp2+"\n");
         }
 
         return null;
@@ -351,12 +356,12 @@ public class Minijava_to_LLVM_visitor extends GJNoArguDepthFirst<String>{
     * f5 -> Expression()
     * f6 -> ";"
     */
-    public String visit(ArrayAssignmentStatement n) throws Exception{
-        String id = n.f0.accept(this);
-        String expr = n.f2.accept(this);
-        String expr2 = n.f5.accept(this);
+    public exprInfo visit(ArrayAssignmentStatement n) throws Exception{
+        exprInfo id = n.f0.accept(this);
+        exprInfo expr = n.f2.accept(this);
+        exprInfo expr2 = n.f5.accept(this);
 
-        String idType = findTypeOf(id);
+        String idType = findTypeOf(id.value);
 
         String type = llvmType(idType);
         int temp,temp2,temp3;
@@ -364,7 +369,7 @@ public class Minijava_to_LLVM_visitor extends GJNoArguDepthFirst<String>{
         if(state.varOrigin.equals("local") || state.varOrigin.equals("argument")){
             // local variable
             temp3 = this.registerCount++;
-            emit("\t%_"+temp3+" = load i32*, i32** %"+id+"\n");
+            emit("\t%_"+temp3+" = load i32*, i32** %"+id.value+"\n");
         }
         else{
             // class field
@@ -373,7 +378,7 @@ public class Minijava_to_LLVM_visitor extends GJNoArguDepthFirst<String>{
             temp2 = this.registerCount++;
             temp3 = this.registerCount++;
 
-            emit("\t%_"+ temp + " = getelementptr i8, i8* %this, i32 "+(vtable.dataMembers.get(id) + 8) +"\n");
+            emit("\t%_"+ temp + " = getelementptr i8, i8* %this, i32 "+(vtable.dataMembers.get(id.value) + 8) +"\n");
             emit("\t%_"+ temp2 + " = bitcast i8* %_" + temp + " to i32**\n");
             emit("\t%_"+ temp3 + " = load i32*, i32** "+temp2+"\n");
         }
@@ -382,7 +387,7 @@ public class Minijava_to_LLVM_visitor extends GJNoArguDepthFirst<String>{
         temp2 = this.registerCount++;
 
         emit("\t%_"+temp+" = load i32, i32* %_"+temp3+"\n");
-        emit("\t%_"+temp2+" = icmp ult "+expr+", %_"+temp+"\n");
+        emit("\t%_"+temp2+" = icmp ult "+expr.type+" "+expr.value+", %_"+temp+"\n");
 
         int label = this.oobCount++;
         int label2 = this.oobCount++;
@@ -392,7 +397,7 @@ public class Minijava_to_LLVM_visitor extends GJNoArguDepthFirst<String>{
         emit("\noob"+ label + ":\n");
         temp = this.registerCount++;
         temp2 = this.registerCount++;
-        emit("\t%_"+temp+" = add "+expr+", 1\n");
+        emit("\t%_"+temp+" = add "+expr.type+" "+expr.value+", 1\n");
         emit("\t%_"+temp2+" = getelementptr i32, i32* %_"+temp3+", i32 %_"+temp+"\n");
         emit("\tstore "+expr2+", i32* %_"+temp2+"\n");
 
@@ -417,13 +422,13 @@ public class Minijava_to_LLVM_visitor extends GJNoArguDepthFirst<String>{
     * f5 -> "else"
     * f6 -> Statement()
     */
-    public String visit(IfStatement n) throws Exception{
-        String expr = n.f2.accept(this);
+    public exprInfo visit(IfStatement n) throws Exception{
+        exprInfo expr = n.f2.accept(this);
         int label1 = this.ifCount++;
         int label2 = this.ifCount++;
         int label3 = this.ifCount++;
 
-        emit("\tbr "+expr+", label %if"+label1+", label %if"+label2+"\n");
+        emit("\tbr "+expr.type+" "+expr.value+", label %if"+label1+", label %if"+label2+"\n");
         emit("if"+label1+":\n");
 
         n.f4.accept(this);
@@ -442,15 +447,15 @@ public class Minijava_to_LLVM_visitor extends GJNoArguDepthFirst<String>{
     * f3 -> ")"
     * f4 -> Statement()
     */
-    public String visit(WhileStatement n) throws Exception{
+    public exprInfo visit(WhileStatement n) throws Exception{
         int label1 = this.loopCount++;
         int label2 = this.loopCount++;
         int label3 = this.loopCount++;
 
         emit("\tbr label %loopstart"+label1+"\n");
         emit("loopstart"+label1+":\n");
-        String expr = n.f2.accept(this);
-        emit("\tbr "+expr+", label %next"+label2+", label %end"+label3+"\n");
+        exprInfo expr = n.f2.accept(this);
+        emit("\tbr "+expr.type+" "+expr.value+", label %next"+label2+", label %end"+label3+"\n");
         emit("next"+label2+":\n");
         n.f4.accept(this);
         emit("\tbr label %loopstart"+label1+"\n");
@@ -465,9 +470,9 @@ public class Minijava_to_LLVM_visitor extends GJNoArguDepthFirst<String>{
     * f3 -> ")"
     * f4 -> ";"
     */
-    public String visit(PrintStatement n) throws Exception{
-        String expr = n.f2.accept(this);
-        emit("\tcall void (i32) @print_int(" + expr +")");
+    public exprInfo visit(PrintStatement n) throws Exception{
+        exprInfo expr = n.f2.accept(this);
+        emit("\tcall void (i32) @print_int(" + expr.type+" "+expr.value +")\n");
         return null;
     }
 
@@ -476,8 +481,8 @@ public class Minijava_to_LLVM_visitor extends GJNoArguDepthFirst<String>{
     * f1 -> "&&"
     * f2 -> Clause()
     */
-    public String visit(AndExpression n) throws Exception {
-        String t1 = n.f0.accept(this);
+    public exprInfo visit(AndExpression n) throws Exception {
+        exprInfo t1 = n.f0.accept(this);
 
         int label1 = this.andclauseCount++;
         int label2 = this.andclauseCount++;
@@ -485,16 +490,212 @@ public class Minijava_to_LLVM_visitor extends GJNoArguDepthFirst<String>{
         int label4 = this.andclauseCount++;
         emit("\tbr label %andclause"+label1+"\n");
         emit("andclause"+label1+":\n");
-        emit("\tbr "+t1+", label %andclause"+label2+", label %andclause"+label4+"\n");
+        emit("\tbr "+t1.type+" "+t1.value+", label %andclause"+label2+", label %andclause"+label4+"\n");
         emit("andclause"+label2+":\n");
-        String t2 = n.f2.accept(this);
+        exprInfo t2 = n.f2.accept(this);
         emit("\tbr label %andclause"+label3+"\n");
         emit("andclause"+label3+":\n");
         emit("\tbr label %andclause"+label4+"\n");
         emit("andclause"+label4+":\n");
         int temp = this.registerCount++;
-        emit("\t%_"+temp+" = phi i1 [ 0, %andclause" + label1 + " ], [ " + t2 +", %andclause" + label3 + " ]\n");
-        return "i1 %_"+temp;
+        emit("\t%_"+temp+" = phi i1 [ 0, %andclause" + label1 + " ], [ " + t2.value +", %andclause" + label3 + " ]\n");
+        return new exprInfo("i1","%_"+temp);
+    }
+
+    /**
+     * f0 -> PrimaryExpression()
+    * f1 -> "<"
+    * f2 -> PrimaryExpression()
+    */
+    public exprInfo visit(CompareExpression n) throws Exception {
+        exprInfo t1 = n.f0.accept(this);
+        exprInfo t2 = n.f2.accept(this);
+        int temp = this.registerCount++;
+        emit("\t%_"+temp+" = icmp slt "+t1.type+" "+t1.value+", "+t2.value+"\n");
+        return new exprInfo("i1","%_"+temp);
+    }
+
+    /**
+    * f0 -> PrimaryExpression()
+    * f1 -> "+"
+    * f2 -> PrimaryExpression()
+    */
+    public exprInfo visit(PlusExpression n) throws Exception {
+        exprInfo t1 = n.f0.accept(this);
+        exprInfo t2 = n.f2.accept(this);
+        int temp = this.registerCount++;
+        emit("\t%_"+temp+" = add "+t1.type+" "+t1.value+", "+t2.value+"\n");
+        return new exprInfo("i32","%_"+temp);
+    }
+
+    /**
+    * f0 -> PrimaryExpression()
+    * f1 -> "-"
+    * f2 -> PrimaryExpression()
+    */
+    public exprInfo visit(MinusExpression n) throws Exception {
+        exprInfo t1 = n.f0.accept(this);
+        exprInfo t2 = n.f2.accept(this);
+        int temp = this.registerCount++;
+        emit("\t%_"+temp+" = sub "+t1.type+" "+t1.value+", "+t2.value+"\n");
+        return new exprInfo("i32","%_"+temp);
+    }
+
+    /**
+    * f0 -> PrimaryExpression()
+    * f1 -> "*"
+    * f2 -> PrimaryExpression()
+    */
+    public exprInfo visit(TimesExpression n) throws Exception {
+        exprInfo t1 = n.f0.accept(this);
+        exprInfo t2 = n.f2.accept(this);
+        int temp = this.registerCount++;
+        emit("\t%_"+temp+" = mul "+t1.type+" "+t1.value+", "+t2.value+"\n");
+        return new exprInfo("i32","%_"+temp);
+    }
+
+    /**
+    * f0 -> PrimaryExpression()
+    * f1 -> "["
+    * f2 -> PrimaryExpression()
+    * f3 -> "]"
+    */
+    public exprInfo visit(ArrayLookup n) throws Exception {
+        exprInfo t1 = n.f0.accept(this);
+        exprInfo t2 = n.f2.accept(this);
+        int temp1 = this.registerCount++;
+        int temp2 = this.registerCount++;
+        int temp3 = this.registerCount++;
+        int temp4 = this.registerCount++;
+        int temp5 = this.registerCount++;
+
+        int label1 = this.oobCount++;
+        int label2 = this.oobCount++;
+        int label3 = this.oobCount++;
+
+        emit("\t%_"+temp1+" = load i32, i32* "+t1.value+"\n");
+        emit("\t%_"+temp2+" = icmp ult i32 "+t2.value+", "+temp1+"\n");
+        emit("\tbr i1 "+temp2+", label %"+label1+", label %"+label2+"\n");
+        emit(label1+":\n");
+        emit("\t%_"+temp3+" = add i32 "+t2.value+", 1\n");
+        emit("\t%_"+temp4+" = getelementptr i32, i32* "+t1.value+", i32 "+temp3+"\n");
+        emit("\t%_"+temp5+" = load i32, i32* %_"+temp4+"\n");
+        emit("\tbr label %"+label3+"\n");
+        emit(label2+":\n");
+        emit("\tcall void @throw_oob\n");
+        emit("\tbr label %"+label3+"\n");
+        emit(label3+":\n");
+
+        return new exprInfo("i32","%_"+temp5);
+    }
+
+    /**
+    * f0 -> PrimaryExpression()
+    * f1 -> "."
+    * f2 -> "length"
+    */
+    public exprInfo visit(ArrayLength n) throws Exception {
+        exprInfo t1 = n.f0.accept(this);
+        int temp = this.registerCount++;
+        emit("%_"+temp+" = load i32, i32* "+t1.value+"\n");
+        return new exprInfo("i32","%_"+temp);
+    }
+
+    /**
+    * f0 -> PrimaryExpression()
+    * f1 -> "."
+    * f2 -> Identifier()
+    * f3 -> "("
+    * f4 -> ( ExpressionList() )?
+    * f5 -> ")"
+    */
+    public exprInfo visit(MessageSend n) throws Exception {
+        exprInfo primaryExpr = n.f0.accept(this);
+        exprInfo funId = n.f2.accept(this);
+
+        int temp1 = this.registerCount++;
+        int temp2 = this.registerCount++;
+        int temp3 = this.registerCount++;
+        int temp4 = this.registerCount++;
+        int temp5 = this.registerCount++;
+        int temp6 = this.registerCount++;
+
+        int offset = Main.VTables.get(primaryExpr.originalType).functions.get(funId.value);
+        emit("\t%_"+temp1+" = bitcast "+primaryExpr.value+" to i8***\n");
+        emit("\t%_"+temp2+" = load i8**, i8*** %_"+temp1+"\n");
+        emit("\t%_"+temp3+" = getelementptr i8*, i8** %_"+temp2+", i32 "+offset/8+"\n");
+        emit("\t%_"+temp4+" = load i8*, i8** %_"+temp3+" to i8***\n");
+
+        // get return type
+        Main.ClassStruct tempClass = Main.symbolTable.get(primaryExpr.originalType);
+        Main.funStruct tempFun = tempClass.functions.get(funId.value);
+        if(tempFun == null){
+            // check parent classes
+            tempClass = Main.symbolTable.get(tempClass.parentName); 
+            while(tempClass!=null){
+                tempFun = tempClass.functions.get(funId.value);
+                if(tempFun!=null){
+                    break;
+                }
+                tempClass = Main.symbolTable.get(tempClass.parentName);
+            }
+            if(tempFun == null){
+                // couldnt find function
+                throw new Exception("MessageSend: function "+funId+" hasn't been declared");
+            }
+        }
+        if(tempFun == null){
+            // couldnt find function
+            throw new Exception("MessageSend: function "+funId+" hasn't been declared");
+        }
+
+        emit("\t%_"+temp5+" = bitcast i8* %_"+temp4+" to "+llvmType(tempFun.returnType)+" (i8*");
+        
+        ArrayList<Entry<String, String>> argTypelist = new ArrayList<Entry<String,String>> (tempFun.args.entrySet()); 
+        for(int i=0; i < argTypelist.size(); i++){
+            emit(", "+llvmType(argTypelist.get(i).getValue()));
+        }
+        emit(")*\n");
+
+        exprInfo arglist = n.f4.accept(this);
+
+        emit("\t%_"+temp6+" = call "+llvmType(tempFun.returnType)+" %_"+temp5+"( "+ arglist.arglist + " )\n");
+
+        return new exprInfo(llvmType(tempFun.returnType),"%_"+temp6);
+    }
+
+    /**
+    * f0 -> Expression()
+    * f1 -> ExpressionTail()
+    */
+    public exprInfo visit(ExpressionList n) throws Exception {
+        exprInfo expr = n.f0.accept(this);
+        state.argsCount.add(0);
+        n.f1.accept(this);
+        exprInfo args = new exprInfo();
+        // System.out.println(state.args);
+        // System.out.println(state.argsCount);
+        args.arglist = expr.type + " " + expr.value;
+        String temp = "";
+        for(int i=0; i<state.argsCount.get(state.argsCount.size()-1); i++){
+            temp = ", " + state.args.get(state.args.size()-1) + temp;
+            state.args.remove(state.args.size()-1);
+        }
+        state.argsCount.remove(state.argsCount.size()-1);
+        args.arglist += temp;
+        return args;
+    }
+
+    /**
+    * f0 -> ","
+    * f1 -> Expression()
+    */
+    public exprInfo visit(ExpressionTerm n) throws Exception {
+        exprInfo expr = n.f1.accept(this);
+        state.args.add(expr.type+" "+expr.value);
+        int temp = state.argsCount.get(state.argsCount.size()-1);
+        state.argsCount.set(state.argsCount.size()-1,temp+1);
+        return null;
     }
 
 
@@ -508,39 +709,114 @@ public class Minijava_to_LLVM_visitor extends GJNoArguDepthFirst<String>{
     *       | AllocationExpression()
     *       | BracketExpression()
     */
-    public String visit(PrimaryExpression n) throws Exception {
-        String expr = n.f0.accept(this);
+    public exprInfo visit(PrimaryExpression n) throws Exception {
+        exprInfo expr = n.f0.accept(this);
         // int
         if(n.f0.which == 0){
-            return "i32 "+expr;
+            return new exprInfo("i32",expr.value,"int");
         }
         // boolean
         else if(n.f0.which == 1 || n.f0.which == 2){
-            return "i8 "+expr;
+            return new exprInfo("i8",expr.value,"boolean");
         }
         // id
         else if(n.f0.which == 3){
-            String type = findTypeOf(expr);
+            String type = findTypeOf(expr.value);
+            String originalType = type;
             type = llvmType(type);
             // local variable
             if(state.varOrigin.equals("local") || state.varOrigin.equals("argument")){
                 int tempReg = this.registerCount++;
-                emit("\t%_"+tempReg+" = load "+type+", "+type+"* %"+expr+"\n");
-                return type+" %_"+tempReg;
+                emit("\t%_"+tempReg+" = load "+type+", "+type+"* %"+expr.value+"\n");
+                return new exprInfo(type,"%_"+tempReg,originalType);
             }
             else{
                 // class field
                 VTable vtable = Main.VTables.get(state.classSt.className);
                 int temp = this.registerCount++;
                 int temp2 = this.registerCount++;
-                emit("\t%_"+ temp + " = getelementptr i8, i8* %this, i32 "+(vtable.dataMembers.get(expr) + 8) +"\n");
+                emit("\t%_"+ temp + " = getelementptr i8, i8* %this, i32 "+(vtable.dataMembers.get(expr.value) + 8) +"\n");
                 emit("\t%_"+ temp2 + " = bitcast i8* %_" + temp + " to " + type + "*\n");
                 emit("\t%_"+temp+" = load "+type+", "+type+"* %_"+temp2+"\n");
-                return type+" %_"+temp;
+                return new exprInfo(type,"%_"+temp,originalType);
             }
-            
         }
         return null;
+    }
+
+    /**
+    * f0 -> "new"
+    * f1 -> "int"
+    * f2 -> "["
+    * f3 -> Expression()
+    * f4 -> "]"
+    */
+    public exprInfo visit(ArrayAllocationExpression n) throws Exception {
+        exprInfo expr = n.f3.accept(this);
+
+        int temp1 = this.registerCount++;
+        int temp2 = this.registerCount++;
+        int temp3 = this.registerCount++;
+        int temp4 = this.registerCount++;
+
+        int label1 = this.arr_allocCount++;
+        int label2 = this.arr_allocCount++;
+
+        emit("\t%_"+temp1+" = icmp slt "+expr.type +" "+ expr.value+ ", 0\n");
+        emit("\tbr i1 %_"+temp1+", label %"+label1+", label %"+label2+"\n");
+        emit(label1+":\n");
+        emit("\tcall void @throw_oob()\n");
+        emit("\tbr label %"+label2+"\n");
+        emit(label2+":\n");
+        emit("\t%_"+temp2+" = add "+expr.type +" "+ expr.value+", 1\n");
+        emit("\t%_"+temp3+" = call i8* @calloc(i32 4, i32 %_"+temp2+")\n");
+        emit("\t%_"+temp4+" = bitcast i8* %_"+temp3+" to i32*\n");
+        emit("\tstore "+expr.type +" "+ expr.value+", i32* %_"+temp4+"\n");
+
+        return new exprInfo("i32*","%_"+temp4,"int[]");
+    }
+
+    /**
+    * f0 -> "new"
+    * f1 -> Identifier()
+    * f2 -> "("
+    * f3 -> ")"
+    */
+    public exprInfo visit(AllocationExpression n) throws Exception {
+        exprInfo expr = n.f1.accept(this);
+
+        int temp1 = this.registerCount++;
+        int temp2 = this.registerCount++;
+        int temp3 = this.registerCount++;
+
+        ArrayList<Entry<String, Integer>> fields = new ArrayList<Entry<String,Integer>> (Main.VTables.get(expr.value).dataMembers.entrySet()); 
+        int fieldsOffset = fields.get(fields.size()-1).getValue();
+        emit("\t%_"+temp1+" = call i8* @calloc(i32 1, i32 "+ Integer.toString(fieldsOffset+8)+")\n");
+        emit("\t%_" + temp2 + " = bitcast i8* %_" + temp1 + " to i8***\n");
+        int numOfFunctions = Main.VTables.get(expr.value).functions.size();
+        emit("\t%_" + temp3 + " = getelementptr [" + numOfFunctions + " x i8*], ["+ numOfFunctions + " x i8*]* @." + expr.value + "_vtable, i32 0, i32 0\n");
+		emit("\tstore i8** %_" + temp3 + ", i8*** " + temp2+"\n");
+        return new exprInfo("i8*",expr.value,expr.value);
+    }
+
+    /**
+    * f0 -> "!"
+    * f1 -> Clause()
+    */
+    public exprInfo visit(NotExpression n) throws Exception {
+        exprInfo expr = n.f1.accept(this);
+        int temp = this.registerCount++;
+        emit("\t%_"+temp+" = xor i1 1, "+expr.value+"\n");
+        return new exprInfo("i1","%_"+temp,expr.value);
+    }
+
+    /**
+    * f0 -> "("
+    * f1 -> Expression()
+    * f2 -> ")"
+    */
+    public exprInfo visit(BracketExpression n) throws Exception {
+        return n.f1.accept(this);
     }
 
 
@@ -548,36 +824,36 @@ public class Minijava_to_LLVM_visitor extends GJNoArguDepthFirst<String>{
     /**
     * f0 -> <INTEGER_LITERAL>
     */
-    public String visit(IntegerLiteral n) throws Exception{
-        return n.f0.toString();
+    public exprInfo visit(IntegerLiteral n) throws Exception{
+        return new exprInfo("i32",n.f0.toString());
     }
 
     /**
      * f0 -> "true"
     */
-    public String visit(TrueLiteral n) throws Exception{
-        return new String("1");
+    public exprInfo visit(TrueLiteral n) throws Exception{
+        return new exprInfo("i1","1");
     }
 
     /**
      * f0 -> "false"
     */
-    public String visit(FalseLiteral n) throws Exception{
-        return new String("0");
+    public exprInfo visit(FalseLiteral n) throws Exception{
+        return new exprInfo("i1","0");
     }
 
     /**
      * f0 -> <IDENTIFIER>
     */
-    public String visit(Identifier n) throws Exception{
-        return n.f0.toString();
+    public exprInfo visit(Identifier n) throws Exception{
+        return new exprInfo(null,n.f0.toString());
     }
 
     /**
      * f0 -> "this"
     */
-    public String visit(ThisExpression n) throws Exception{
-        return new String("this");
+    public exprInfo visit(ThisExpression n) throws Exception{
+        return new exprInfo("i8*","%this");
     }
 
      /**
@@ -585,21 +861,21 @@ public class Minijava_to_LLVM_visitor extends GJNoArguDepthFirst<String>{
     * f1 -> "["
     * f2 -> "]"
     */
-    public String visit(ArrayType n) throws Exception{
-        return new String("int[]");
+    public exprInfo visit(ArrayType n) throws Exception{
+        return new exprInfo(null,"int[]");
     }
 
     /**
     * f0 -> "boolean"
     */
-    public String visit(BooleanType n) throws Exception{
-        return new String("boolean");
+    public exprInfo visit(BooleanType n) throws Exception{
+        return new exprInfo(null,"boolean");
     }
 
     /**
      * f0 -> "int"
     */
-    public String visit(IntegerType n) throws Exception{
-        return new String("int");
+    public exprInfo visit(IntegerType n) throws Exception{
+        return new exprInfo(null,"int");
     }
 }
