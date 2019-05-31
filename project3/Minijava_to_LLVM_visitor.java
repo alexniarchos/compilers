@@ -1,9 +1,14 @@
 import syntaxtree.*;
 import visitor.GJNoArguDepthFirst;
+
+import java.io.FileWriter;
+import java.io.IOException;
 import java.lang.System;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.lang.Exception;
+
 import java.util.ArrayList;
 
 public class Minijava_to_LLVM_visitor extends GJNoArguDepthFirst<exprInfo>{
@@ -25,11 +30,15 @@ public class Minijava_to_LLVM_visitor extends GJNoArguDepthFirst<exprInfo>{
         public String varOrigin;
         public ArrayList<String> args; 
         public ArrayList<Integer> argsCount;
+        public String filename;
+        public FileWriter fw;
     }
 
     public State state = new State();
 
-    public Minijava_to_LLVM_visitor(){
+    public Minijava_to_LLVM_visitor(FileWriter fw){
+        state.fw = fw;
+
         fillVTables();
         printVTables();
 
@@ -139,6 +148,9 @@ public class Minijava_to_LLVM_visitor extends GJNoArguDepthFirst<exprInfo>{
     }
     
     public static String llvmType(String type){
+        if(type == null){
+            System.out.println("null type");
+        }
 		if(type.equals("int")){
 			return "i32";
 		}
@@ -155,6 +167,12 @@ public class Minijava_to_LLVM_visitor extends GJNoArguDepthFirst<exprInfo>{
 
     public void emit(String str){
         System.out.print(str);
+        try{
+            state.fw.write(str);
+        }
+        catch(IOException e){
+            System.out.println(e);
+        }
     }
 
     public String findTypeOf(String id){
@@ -301,7 +319,7 @@ public class Minijava_to_LLVM_visitor extends GJNoArguDepthFirst<exprInfo>{
         emit(state.tempStr);
         n.f7.accept(this);
         n.f8.accept(this);
-        exprInfo exprString= n.f10.accept(this);
+        exprInfo exprString = n.f10.accept(this);
         emit("\tret "+llvmType(type.value)+" "+ exprString.value +"\n}\n\n");
         return null;
     }
@@ -380,7 +398,7 @@ public class Minijava_to_LLVM_visitor extends GJNoArguDepthFirst<exprInfo>{
 
             emit("\t%_"+ temp + " = getelementptr i8, i8* %this, i32 "+(vtable.dataMembers.get(id.value) + 8) +"\n");
             emit("\t%_"+ temp2 + " = bitcast i8* %_" + temp + " to i32**\n");
-            emit("\t%_"+ temp3 + " = load i32*, i32** "+temp2+"\n");
+            emit("\t%_"+ temp3 + " = load i32*, i32** %_"+temp2+"\n");
         }
 
         temp = this.registerCount++;
@@ -399,7 +417,7 @@ public class Minijava_to_LLVM_visitor extends GJNoArguDepthFirst<exprInfo>{
         temp2 = this.registerCount++;
         emit("\t%_"+temp+" = add "+expr.type+" "+expr.value+", 1\n");
         emit("\t%_"+temp2+" = getelementptr i32, i32* %_"+temp3+", i32 %_"+temp+"\n");
-        emit("\tstore "+expr2+", i32* %_"+temp2+"\n");
+        emit("\tstore "+expr2.type+" "+expr2.value+", i32* %_"+temp2+"\n");
 
         label = this.oobCount++;
 
@@ -574,17 +592,17 @@ public class Minijava_to_LLVM_visitor extends GJNoArguDepthFirst<exprInfo>{
         int label3 = this.oobCount++;
 
         emit("\t%_"+temp1+" = load i32, i32* "+t1.value+"\n");
-        emit("\t%_"+temp2+" = icmp ult i32 "+t2.value+", "+temp1+"\n");
-        emit("\tbr i1 "+temp2+", label %"+label1+", label %"+label2+"\n");
-        emit(label1+":\n");
+        emit("\t%_"+temp2+" = icmp ult i32 "+t2.value+", %_"+temp1+"\n");
+        emit("\tbr i1 %_"+temp2+", label %oob"+label1+", label %oob"+label2+"\n");
+        emit("oob"+label1+":\n");
         emit("\t%_"+temp3+" = add i32 "+t2.value+", 1\n");
-        emit("\t%_"+temp4+" = getelementptr i32, i32* "+t1.value+", i32 "+temp3+"\n");
+        emit("\t%_"+temp4+" = getelementptr i32, i32* "+t1.value+", i32 %_"+temp3+"\n");
         emit("\t%_"+temp5+" = load i32, i32* %_"+temp4+"\n");
-        emit("\tbr label %"+label3+"\n");
-        emit(label2+":\n");
-        emit("\tcall void @throw_oob\n");
-        emit("\tbr label %"+label3+"\n");
-        emit(label3+":\n");
+        emit("\tbr label %oob"+label3+"\n");
+        emit("oob"+label2+":\n");
+        emit("\tcall void @throw_oob()\n");
+        emit("\tbr label %oob"+label3+"\n");
+        emit("oob"+label3+":\n");
 
         return new exprInfo("i32","%_"+temp5);
     }
@@ -620,11 +638,12 @@ public class Minijava_to_LLVM_visitor extends GJNoArguDepthFirst<exprInfo>{
         int temp5 = this.registerCount++;
         int temp6 = this.registerCount++;
 
+        // System.out.println(primaryExpr.type+" "+primaryExpr.value+" "+primaryExpr.originalType);
         int offset = Main.VTables.get(primaryExpr.originalType).functions.get(funId.value);
-        emit("\t%_"+temp1+" = bitcast "+primaryExpr.value+" to i8***\n");
+        emit("\t%_"+temp1+" = bitcast "+primaryExpr.type+" "+primaryExpr.value+" to i8***\n");
         emit("\t%_"+temp2+" = load i8**, i8*** %_"+temp1+"\n");
         emit("\t%_"+temp3+" = getelementptr i8*, i8** %_"+temp2+", i32 "+offset/8+"\n");
-        emit("\t%_"+temp4+" = load i8*, i8** %_"+temp3+" to i8***\n");
+        emit("\t%_"+temp4+" = load i8*, i8** %_"+temp3+"\n");
 
         // get return type
         Main.ClassStruct tempClass = Main.symbolTable.get(primaryExpr.originalType);
@@ -658,10 +677,16 @@ public class Minijava_to_LLVM_visitor extends GJNoArguDepthFirst<exprInfo>{
         emit(")*\n");
 
         exprInfo arglist = n.f4.accept(this);
+        if(arglist == null){
+            arglist = new exprInfo("");
+        }
+        else{
+            arglist.arglist = ", " + arglist.arglist;
+        }
 
-        emit("\t%_"+temp6+" = call "+llvmType(tempFun.returnType)+" %_"+temp5+"( "+ arglist.arglist + " )\n");
+        emit("\t%_"+temp6+" = call "+llvmType(tempFun.returnType)+" %_"+temp5+"( "+ primaryExpr.type+ " "+primaryExpr.value+ arglist.arglist + " )\n");
 
-        return new exprInfo(llvmType(tempFun.returnType),"%_"+temp6);
+        return new exprInfo(llvmType(tempFun.returnType),"%_"+temp6,tempFun.returnType);
     }
 
     /**
@@ -711,13 +736,14 @@ public class Minijava_to_LLVM_visitor extends GJNoArguDepthFirst<exprInfo>{
     */
     public exprInfo visit(PrimaryExpression n) throws Exception {
         exprInfo expr = n.f0.accept(this);
+        // System.out.println("checking "+expr.value+" "+n.f0.which);
         // int
         if(n.f0.which == 0){
             return new exprInfo("i32",expr.value,"int");
         }
         // boolean
         else if(n.f0.which == 1 || n.f0.which == 2){
-            return new exprInfo("i8",expr.value,"boolean");
+            return new exprInfo("i1",expr.value,"boolean");
         }
         // id
         else if(n.f0.which == 3){
@@ -728,6 +754,7 @@ public class Minijava_to_LLVM_visitor extends GJNoArguDepthFirst<exprInfo>{
             if(state.varOrigin.equals("local") || state.varOrigin.equals("argument")){
                 int tempReg = this.registerCount++;
                 emit("\t%_"+tempReg+" = load "+type+", "+type+"* %"+expr.value+"\n");
+                // System.out.println("return "+type+" "+"%_"+tempReg+" "+originalType);
                 return new exprInfo(type,"%_"+tempReg,originalType);
             }
             else{
@@ -735,13 +762,17 @@ public class Minijava_to_LLVM_visitor extends GJNoArguDepthFirst<exprInfo>{
                 VTable vtable = Main.VTables.get(state.classSt.className);
                 int temp = this.registerCount++;
                 int temp2 = this.registerCount++;
+                int temp3 = this.registerCount++;
                 emit("\t%_"+ temp + " = getelementptr i8, i8* %this, i32 "+(vtable.dataMembers.get(expr.value) + 8) +"\n");
                 emit("\t%_"+ temp2 + " = bitcast i8* %_" + temp + " to " + type + "*\n");
-                emit("\t%_"+temp+" = load "+type+", "+type+"* %_"+temp2+"\n");
-                return new exprInfo(type,"%_"+temp,originalType);
+                emit("\t%_"+temp3+" = load "+type+", "+type+"* %_"+temp2+"\n");
+                return new exprInfo(type,"%_"+temp3,originalType);
             }
         }
-        return null;
+        else if(n.f0.which == 4){
+            return new exprInfo("i8*","%this",state.classSt.className);
+        }
+        return expr;
     }
 
     /**
@@ -763,11 +794,11 @@ public class Minijava_to_LLVM_visitor extends GJNoArguDepthFirst<exprInfo>{
         int label2 = this.arr_allocCount++;
 
         emit("\t%_"+temp1+" = icmp slt "+expr.type +" "+ expr.value+ ", 0\n");
-        emit("\tbr i1 %_"+temp1+", label %"+label1+", label %"+label2+"\n");
-        emit(label1+":\n");
+        emit("\tbr i1 %_"+temp1+", label %arr_alloc"+label1+", label %arr_alloc"+label2+"\n");
+        emit("arr_alloc"+label1+":\n");
         emit("\tcall void @throw_oob()\n");
-        emit("\tbr label %"+label2+"\n");
-        emit(label2+":\n");
+        emit("\tbr label %arr_alloc"+label2+"\n");
+        emit("arr_alloc"+label2+":\n");
         emit("\t%_"+temp2+" = add "+expr.type +" "+ expr.value+", 1\n");
         emit("\t%_"+temp3+" = call i8* @calloc(i32 4, i32 %_"+temp2+")\n");
         emit("\t%_"+temp4+" = bitcast i8* %_"+temp3+" to i32*\n");
@@ -790,13 +821,30 @@ public class Minijava_to_LLVM_visitor extends GJNoArguDepthFirst<exprInfo>{
         int temp3 = this.registerCount++;
 
         ArrayList<Entry<String, Integer>> fields = new ArrayList<Entry<String,Integer>> (Main.VTables.get(expr.value).dataMembers.entrySet()); 
-        int fieldsOffset = fields.get(fields.size()-1).getValue();
+        int fieldsOffset;
+        if(fields.size()>0){
+            fieldsOffset = fields.get(fields.size()-1).getValue();
+            String type = Main.symbolTable.get(expr.value).dataMembers.get(fields.get(fields.size()-1).getKey());
+            if(type.equals("int")){
+                fieldsOffset+=4;
+            }
+            else if(type.equals("boolean")){
+                fieldsOffset+=1;
+            }
+            else{
+                fieldsOffset+=8;
+            }
+        }
+        else{
+            fieldsOffset = 0;
+        }
+        
         emit("\t%_"+temp1+" = call i8* @calloc(i32 1, i32 "+ Integer.toString(fieldsOffset+8)+")\n");
         emit("\t%_" + temp2 + " = bitcast i8* %_" + temp1 + " to i8***\n");
         int numOfFunctions = Main.VTables.get(expr.value).functions.size();
         emit("\t%_" + temp3 + " = getelementptr [" + numOfFunctions + " x i8*], ["+ numOfFunctions + " x i8*]* @." + expr.value + "_vtable, i32 0, i32 0\n");
-		emit("\tstore i8** %_" + temp3 + ", i8*** " + temp2+"\n");
-        return new exprInfo("i8*",expr.value,expr.value);
+		emit("\tstore i8** %_" + temp3 + ", i8*** %_" + temp2+"\n");
+        return new exprInfo("i8*","%_"+temp1,expr.value);
     }
 
     /**

@@ -207,30 +207,30 @@ class Tree{
     // Check if the element to be removed will use the
     // righ or left subtree if one exists
     public boolean Remove(Tree p_node, Tree c_node){
-	boolean ntb ;
-	int auxkey1 ;
-	int auxkey2 ;
-	
-	if (c_node.GetHas_Left()) 
-	    ntb = this.RemoveLeft(p_node,c_node) ;
-	else 
-	    if (c_node.GetHas_Right())
-		ntb = this.RemoveRight(p_node,c_node) ;
-	    else {
-		auxkey1 = c_node.GetKey();
-		//auxtree01 = p_node.GetLeft() ;
-		//auxkey2 = auxtree01.GetKey() ;
-		auxkey2 = (p_node.GetLeft()).GetKey() ;
-		if (this.Compare(auxkey1,auxkey2)) {
-		    ntb = p_node.SetLeft(my_null);
-		    ntb = p_node.SetHas_Left(false);
-		}
-		else {
-		    ntb = p_node.SetRight(my_null);
-		    ntb = p_node.SetHas_Right(false);
-		}
-	    }
-	return true ;
+		boolean ntb ;
+		int auxkey1 ;
+		int auxkey2 ;
+		
+		if (c_node.GetHas_Left()) 
+			ntb = this.RemoveLeft(p_node,c_node) ;
+		else 
+			if (c_node.GetHas_Right())
+				ntb = this.RemoveRight(p_node,c_node) ;
+			else {
+				auxkey1 = c_node.GetKey();
+				//auxtree01 = p_node.GetLeft() ;
+				//auxkey2 = auxtree01.GetKey() ;
+				auxkey2 = (p_node.GetLeft()).GetKey() ;
+				if (this.Compare(auxkey1,auxkey2)) {
+					ntb = p_node.SetLeft(my_null);
+					ntb = p_node.SetHas_Left(false);
+				}
+				else {
+					ntb = p_node.SetRight(my_null);
+					ntb = p_node.SetHas_Right(false);
+				}
+			}
+		return true ;
     }
 
 

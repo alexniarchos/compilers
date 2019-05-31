@@ -9,6 +9,7 @@ import java.util.Set;
 class Main {
 	public static LinkedHashMap<String,ClassStruct> symbolTable;
 	public static LinkedHashMap<String,VTable> VTables;
+	public static String mainClass;
 
 	public static class funStruct{
 		public String returnType;
@@ -123,11 +124,18 @@ class Main {
 				VTables = new LinkedHashMap<String,VTable>();
 				fillSTVisitor fillST = new fillSTVisitor();
 				Goal root = parser.Goal();
-                root.accept(fillST);
-                printOffsets();
-                System.out.println("\nGenerated Code:\n\n");
-                Minijava_to_LLVM_visitor generateCodeVisitor = new Minijava_to_LLVM_visitor();
+				try {
+					root.accept(fillST);
+				} catch (Exception ex) {
+					System.out.println("fill Symbol Table Error: "+ex.getMessage());
+				}
+				printOffsets();
+				FileWriter fw = new FileWriter("./out/"+Main.mainClass+".ll");
+				System.out.println("./out/"+Main.mainClass+".ll");
+				System.out.println("\nGenerated Code:\n\n");
+				Minijava_to_LLVM_visitor generateCodeVisitor = new Minijava_to_LLVM_visitor(fw);
 				root.accept(generateCodeVisitor);
+				fw.close();
 			}
 			catch(ParseException ex){
 				System.out.println(ex.getMessage());

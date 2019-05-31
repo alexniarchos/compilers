@@ -36,6 +36,7 @@ public class fillSTVisitor extends GJNoArguDepthFirst<String>{
     */
     public String visit(MainClass n) throws Exception {
         String className = n.f1.accept(this);
+        Main.mainClass = className;
         String mainArg = n.f11.accept(this);
         
         Main.ClassStruct tempClass = new Main.ClassStruct(className,null);

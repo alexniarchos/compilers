@@ -92,13 +92,13 @@ class List{
     
     // Insert a new node at the beginning of the list
     public List Insert(Element new_elem){
-	boolean ret_val ;
-	List aux03 ;
-	List aux02 ;
-	aux03 = this ;
-	aux02 = new List();
-	ret_val = aux02.InitNew(new_elem,aux03,false);
-	return aux02 ;
+		boolean ret_val ;
+		List aux03 ;
+		List aux02 ;
+		aux03 = this ;
+		aux02 = new List();
+		ret_val = aux02.InitNew(new_elem,aux03,false);
+		return aux02 ;
     }
     
     
