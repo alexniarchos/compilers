@@ -1,4 +1,4 @@
-all: c
+all: compile
 
 compile:
 	java -jar ./jtb132di.jar -te minijava.jj
@@ -8,12 +8,8 @@ compile:
 c: 
 	javac Main.java
 
-cr:
-	javac Main.java
-	java Main ./testcases/Factorial.java
-
 r:
-	java Main ./testcases/TreeVisitor.java
+	java Main ./testcases/*.java
 
 clean:
 	rm -f *.class *~
