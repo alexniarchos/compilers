@@ -131,8 +131,7 @@ class Main {
 				}
 				printOffsets();
 				FileWriter fw = new FileWriter("./out/"+Main.mainClass+".ll");
-				System.out.println("./out/"+Main.mainClass+".ll");
-				System.out.println("\nGenerated Code:\n\n");
+				System.out.println("Generating: ./out/"+Main.mainClass+".ll");
 				Minijava_to_LLVM_visitor generateCodeVisitor = new Minijava_to_LLVM_visitor(fw);
 				root.accept(generateCodeVisitor);
 				fw.close();
@@ -143,9 +142,9 @@ class Main {
 			catch(FileNotFoundException ex){
 				System.err.println(ex.getMessage());
 			}
-			// catch (Exception ex) {
-			// 	System.out.println("Code Generator Visitor Error: "+ex.getMessage());
-			// }
+			catch (Exception ex) {
+				System.out.println("Code Generator Visitor Error: "+ex.getMessage());
+			}
 			finally{
 				try{
 					if(fis != null) fis.close();
