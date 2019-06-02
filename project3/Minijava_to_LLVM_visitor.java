@@ -96,7 +96,6 @@ public class Minijava_to_LLVM_visitor extends GJNoArguDepthFirst<exprInfo>{
 			}
 			// calculate and print variable offsets
 			for(Map.Entry<String,String> varEntry : classEntry.getValue().dataMembers.entrySet()){
-				// System.out.println(classEntry.getKey()+"."+varEntry.getKey()+" : "+varOffset);
 				tempVtable.dataMembers.put(varEntry.getKey(),varOffset);
 				if(varEntry.getValue().equals("int")){
 					varOffset+=4;
@@ -166,7 +165,7 @@ public class Minijava_to_LLVM_visitor extends GJNoArguDepthFirst<exprInfo>{
 	}
 
     public void emit(String str){
-        System.out.print(str);
+        // System.out.print(str);
         try{
             state.fw.write(str);
         }
@@ -638,7 +637,6 @@ public class Minijava_to_LLVM_visitor extends GJNoArguDepthFirst<exprInfo>{
         int temp5 = this.registerCount++;
         int temp6 = this.registerCount++;
 
-        // System.out.println(primaryExpr.type+" "+primaryExpr.value+" "+primaryExpr.originalType);
         int offset = Main.VTables.get(primaryExpr.originalType).functions.get(funId.value);
         emit("\t%_"+temp1+" = bitcast "+primaryExpr.type+" "+primaryExpr.value+" to i8***\n");
         emit("\t%_"+temp2+" = load i8**, i8*** %_"+temp1+"\n");
@@ -698,8 +696,7 @@ public class Minijava_to_LLVM_visitor extends GJNoArguDepthFirst<exprInfo>{
         state.argsCount.add(0);
         n.f1.accept(this);
         exprInfo args = new exprInfo();
-        // System.out.println(state.args);
-        // System.out.println(state.argsCount);
+
         args.arglist = expr.type + " " + expr.value;
         String temp = "";
         for(int i=0; i<state.argsCount.get(state.argsCount.size()-1); i++){
@@ -736,7 +733,6 @@ public class Minijava_to_LLVM_visitor extends GJNoArguDepthFirst<exprInfo>{
     */
     public exprInfo visit(PrimaryExpression n) throws Exception {
         exprInfo expr = n.f0.accept(this);
-        // System.out.println("checking "+expr.value+" "+n.f0.which);
         // int
         if(n.f0.which == 0){
             return new exprInfo("i32",expr.value,"int");
@@ -754,7 +750,6 @@ public class Minijava_to_LLVM_visitor extends GJNoArguDepthFirst<exprInfo>{
             if(state.varOrigin.equals("local") || state.varOrigin.equals("argument")){
                 int tempReg = this.registerCount++;
                 emit("\t%_"+tempReg+" = load "+type+", "+type+"* %"+expr.value+"\n");
-                // System.out.println("return "+type+" "+"%_"+tempReg+" "+originalType);
                 return new exprInfo(type,"%_"+tempReg,originalType);
             }
             else{
@@ -824,7 +819,19 @@ public class Minijava_to_LLVM_visitor extends GJNoArguDepthFirst<exprInfo>{
         int fieldsOffset;
         if(fields.size()>0){
             fieldsOffset = fields.get(fields.size()-1).getValue();
-            String type = Main.symbolTable.get(expr.value).dataMembers.get(fields.get(fields.size()-1).getKey());
+            String lastField = fields.get(fields.size()-1).getKey();
+
+            // variables declared as parentclass datamembers
+            String type=null;
+            Main.ClassStruct tempClass = Main.symbolTable.get(expr.value);
+            while(tempClass!=null){
+                type = tempClass.dataMembers.get(lastField);
+                if(type!=null){
+                    break;
+                }
+                tempClass = Main.symbolTable.get(tempClass.parentName);
+            }
+
             if(type.equals("int")){
                 fieldsOffset+=4;
             }
